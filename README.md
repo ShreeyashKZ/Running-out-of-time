@@ -2,7 +2,20 @@
 
 > A modern, offline-first Material 3 time-tracking and productivity intelligence application built for **Web & Android 9.0+ (API 28+)**.
 
+[![Download APK](https://img.shields.io/badge/Download-Android%20APK%20(Android%209%2B)-brightgreen?style=for-the-badge&logo=android)](https://github.com/ShreeyashKZ/Running-out-of-time/releases/download/v1.0.0/Running-out-of-time.apk)
+[![Release v1.0.0](https://img.shields.io/github/v/release/ShreeyashKZ/Running-out-of-time?style=for-the-badge)](https://github.com/ShreeyashKZ/Running-out-of-time/releases/tag/v1.0.0)
+
 ---
+
+## 📲 Direct APK Installation (On Your Phone)
+
+To install **Running out of time** directly on your Android phone (Android 9.0+):
+
+1. **[Click here to download `Running-out-of-time.apk`](https://github.com/ShreeyashKZ/Running-out-of-time/releases/download/v1.0.0/Running-out-of-time.apk)** (or go to the [v1.0.0 Release page](https://github.com/ShreeyashKZ/Running-out-of-time/releases/tag/v1.0.0)).
+2. Tap the downloaded file in your browser notifications or Files app.
+3. If prompted by Android, enable **"Allow from this source"** for your browser / file manager.
+4. Tap **Install** and you're all set!
+
 
 ## 🌟 Key Features
 
