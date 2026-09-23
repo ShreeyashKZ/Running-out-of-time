@@ -83,9 +83,15 @@ class App {
 
     switch (tab) {
       case 'tracker':
-        this.activeViewController = new ActiveTracker(this.mainContainer, (completedSession) => {
-          this.showSnackbar(`Recorded "${completedSession.title}" for ${formatHumanDuration(completedSession.durationMs)}`);
-        });
+        this.activeViewController = new ActiveTracker(
+          this.mainContainer,
+          (completedSession) => {
+            this.showSnackbar(`Recorded "${completedSession.title}" for ${formatHumanDuration(completedSession.durationMs)}`);
+          },
+          (initialTitle) => {
+            this.openManualEntry({ isClaimMode: true, title: initialTitle });
+          }
+        );
         break;
 
       case 'leaderboard':
@@ -144,11 +150,12 @@ class App {
     }
   }
 
-  openManualEntry() {
+  openManualEntry(options = {}) {
     new ManualEntryModal(this.modalContainer, (session) => {
-      this.showSnackbar(`Saved manual entry for "${session.title}" (${formatHumanDuration(session.durationMs)})`);
+      const actionName = options.isClaimMode ? 'Claimed' : 'Saved';
+      this.showSnackbar(`${actionName} "${session.title}" (${formatHumanDuration(session.durationMs)})`);
       this.navigateTo(this.currentTab);
-    });
+    }, options);
   }
 
   // ==================== BACKGROUND-RESILIENT TIMER LISTENERS ====================
@@ -159,10 +166,12 @@ class App {
     const quickActivityName = document.getElementById('quickActivityName');
     const quickTimerElapsed = document.getElementById('quickTimerElapsed');
 
-    timerService.onTick((elapsedMs, formatted, activeSession) => {
-      if (activeSession) {
-        document.title = `⏳ ${formatted} - ${activeSession.title} | Running out of time`;
-        if (quickTimerElapsed) quickTimerElapsed.textContent = formatted;
+    timerService.onTick((tickData) => {
+      if (tickData.isTracking && tickData.activeSession) {
+        document.title = `⏳ ${tickData.activeElapsedFormatted} - ${tickData.activeSession.title} | Running out of time`;
+        if (quickTimerElapsed) quickTimerElapsed.textContent = tickData.activeElapsedFormatted;
+      } else {
+        document.title = `${tickData.localTimeFormatted} • Running out of time`;
       }
     });
 

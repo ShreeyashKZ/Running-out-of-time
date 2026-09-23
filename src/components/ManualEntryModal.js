@@ -1,11 +1,12 @@
-// Manual Activity Logging Modal for "Running out of time"
+// Claim Elapsed Time & Past Activity Logging Modal for "Running out of time"
 import { addSession, getAllTags } from '../services/db.js';
-import { formatHumanDuration } from '../services/timer.js';
+import { formatHumanDuration, timerService } from '../services/timer.js';
 
 export class ManualEntryModal {
-  constructor(modalContainer, onSaved) {
+  constructor(modalContainer, onSaved, options = {}) {
     this.modalContainer = modalContainer;
     this.onSaved = onSaved;
+    this.options = options;
     this.tagsList = [];
 
     this.init();
@@ -24,14 +25,24 @@ export class ManualEntryModal {
   }
 
   render() {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const defaultStart = '12:25';
-    const defaultEnd = '15:30';
+    const suggested = timerService.getSuggestedClaimTimes();
+    const defaultDate = this.options.date || suggested.dateStr;
+    const defaultStart = this.options.startTime || suggested.startTimeStr;
+    const defaultEnd = this.options.endTime || suggested.endTimeStr;
+    const initialTitle = this.options.title || '';
+    const modalTitle = this.options.isClaimMode 
+      ? 'Claim Elapsed Time' 
+      : 'Log Past Activity';
 
     this.modalContainer.innerHTML = `
       <div class="m3-dialog">
         <div class="dialog-header">
-          <h3 class="dialog-title">Log Past Activity</h3>
+          <div>
+            <h3 class="dialog-title">${modalTitle}</h3>
+            <p style="font-size: 0.82rem; color: var(--md-sys-color-outline); margin-top: 2px;">
+              Select the day and time interval to create a record for forgotten or untracked activities.
+            </p>
+          </div>
           <button class="m3-icon-button" id="btnManualClose">
             <span class="material-symbols-rounded">close</span>
           </button>
@@ -39,12 +50,12 @@ export class ManualEntryModal {
 
         <form id="manualEntryForm">
           <div style="display: flex; flex-direction: column; gap: 16px;">
-            <!-- Activity Title -->
+            <!-- Activity Name with Autocomplete -->
             <div class="m3-field-container">
-              <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: var(--md-sys-color-outline);">
+              <label style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--md-sys-color-outline);">
                 Activity Name
               </label>
-              <span class="material-symbols-rounded m3-field-icon" style="top: 38px;">edit_note</span>
+              <span class="material-symbols-rounded m3-field-icon" style="top: 36px;">edit_note</span>
               <input
                 type="text"
                 id="manualTitle"
@@ -52,39 +63,40 @@ export class ManualEntryModal {
                 placeholder="e.g. Attending class"
                 required
                 autocomplete="off"
+                value="${escapeHTML(initialTitle)}"
               />
               <div id="manualAutocomplete" class="m3-autocomplete-panel" style="display: none;"></div>
             </div>
 
-            <!-- Date -->
+            <!-- Day / Date Selection -->
             <div>
-              <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: var(--md-sys-color-outline);">
-                Date
+              <label style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--md-sys-color-outline);">
+                Day
               </label>
-              <input type="date" id="manualDate" class="m3-text-field" style="padding-left: 16px;" value="${todayStr}" required />
+              <input type="date" id="manualDate" class="m3-text-field" style="padding-left: 16px;" value="${defaultDate}" required />
             </div>
 
-            <!-- Start Time & End Time -->
+            <!-- Start Time & End Time Selection -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
               <div>
-                <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: var(--md-sys-color-outline);">
+                <label style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--md-sys-color-outline);">
                   Start Time
                 </label>
                 <input type="time" id="manualStartTime" class="m3-text-field" style="padding-left: 16px;" value="${defaultStart}" required />
               </div>
               <div>
-                <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: var(--md-sys-color-outline);">
+                <label style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--md-sys-color-outline);">
                   End Time
                 </label>
                 <input type="time" id="manualEndTime" class="m3-text-field" style="padding-left: 16px;" value="${defaultEnd}" required />
               </div>
             </div>
 
-            <!-- Duration preview -->
-            <div style="background-color: var(--md-sys-color-surface-container); padding: 12px 16px; border-radius: var(--shape-corner-md); display: flex; align-items: center; justify-content: space-between;">
-              <span style="font-size: 0.85rem; color: var(--md-sys-color-outline);">Calculated Duration:</span>
+            <!-- Calculated Duration Preview -->
+            <div style="background-color: var(--md-sys-color-surface-container); padding: 12px 16px; border-radius: var(--shape-corner-md); display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--md-sys-color-outline-variant);">
+              <span style="font-size: 0.85rem; color: var(--md-sys-color-outline);">Duration to Record:</span>
               <span id="manualDurationPreview" style="font-family: var(--font-family-mono); font-weight: 700; color: var(--md-sys-color-primary);">
-                3 hours 5 minutes
+                --
               </span>
             </div>
           </div>
@@ -92,8 +104,8 @@ export class ManualEntryModal {
           <div class="dialog-footer">
             <button type="button" class="m3-button text" id="btnManualCancel">Cancel</button>
             <button type="submit" class="m3-button filled">
-              <span class="material-symbols-rounded">check</span>
-              Save Activity
+              <span class="material-symbols-rounded">save</span>
+              Save Activity Log
             </button>
           </div>
         </form>
@@ -132,7 +144,7 @@ export class ManualEntryModal {
     inputEnd.addEventListener('change', updateDuration);
     updateDuration();
 
-    // Autocomplete on title
+    // Autocomplete on title input
     inputTitle.addEventListener('input', () => {
       const q = inputTitle.value.trim().toLowerCase();
       if (!q) {
@@ -147,7 +159,11 @@ export class ManualEntryModal {
 
       dropdown.innerHTML = matches.slice(0, 5).map(m => `
         <div class="autocomplete-item" data-val="${escapeHTML(m.displayName || m.name)}">
-          <span>${escapeHTML(m.displayName || m.name)}</span>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="material-symbols-rounded" style="font-size: 16px; color: var(--md-sys-color-primary);">label</span>
+            <span>${escapeHTML(m.displayName || m.name)}</span>
+          </div>
+          <span style="font-size: 0.75rem; color: var(--md-sys-color-outline);">${m.useCount > 1 ? `${m.useCount}x` : ''}</span>
         </div>
       `).join('');
       dropdown.style.display = 'block';
@@ -156,6 +172,7 @@ export class ManualEntryModal {
         item.addEventListener('click', () => {
           inputTitle.value = item.getAttribute('data-val');
           dropdown.style.display = 'none';
+          inputTitle.focus();
         });
       });
     });
@@ -187,7 +204,7 @@ export class ManualEntryModal {
         endTime,
         durationMs,
         dateStr,
-        notes: 'Manually logged'
+        notes: this.options.isClaimMode ? 'Claimed elapsed time' : 'Manually logged'
       };
 
       await addSession(session);

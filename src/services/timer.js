@@ -1,4 +1,4 @@
-// Relentless Continuous Timer & Master Timepiece Service for "Running out of time"
+// Timer & Local Time Service for "Running out of time"
 import { getActiveTimerState, saveActiveTimerState, addSession, getAllSessions } from './db.js';
 import { timeSync } from './timeSync.js';
 
@@ -14,21 +14,19 @@ class TimerService {
   }
 
   async init() {
-    // Rehydrate active tracking session
+    // Only rehydrate an active session if one was explicitly started before
     const saved = getActiveTimerState();
     if (saved && saved.isRunning && saved.startTime) {
       this.activeSession = saved;
     }
 
-    // Determine when the last tracked session finished to calculate untracked time
+    // Load last session to know when the user last tracked something
     const all = await getAllSessions();
     if (all.length > 0) {
       this.lastSessionEndTime = all[0].endTime || all[0].startTime;
-    } else {
-      this.lastSessionEndTime = timeSync.now();
     }
 
-    // Master Clock runs 24/7/365 unconditionally
+    // Clock updates every second showing local device time and day remaining
     this.startMasterClock();
   }
 
@@ -81,7 +79,7 @@ class TimerService {
     // Save to IndexedDB
     await addSession(completedSession);
 
-    // Update last session end time for untracked time counter
+    // Update last session end time
     this.lastSessionEndTime = endTime;
 
     this.activeSession = null;
@@ -91,30 +89,6 @@ class TimerService {
     this.notifyTick();
 
     return completedSession;
-  }
-
-  // Claim the ongoing untracked time retroactively
-  async claimUntrackedTime(title, tags = []) {
-    const now = timeSync.now();
-    const startTime = this.lastSessionEndTime || (now - 15 * 60 * 1000);
-    const durationMs = Math.max(0, now - startTime);
-    const startDate = new Date(startTime);
-    const dateStr = startDate.toISOString().split('T')[0];
-
-    const session = {
-      title: title.trim() || 'Untitled Activity',
-      tags: Array.isArray(tags) ? tags : [title.trim().toLowerCase()],
-      startTime,
-      endTime: now,
-      durationMs,
-      dateStr,
-      notes: 'Claimed from untracked time'
-    };
-
-    await addSession(session);
-    this.lastSessionEndTime = now;
-    this.notifyTick();
-    return session;
   }
 
   isActive() {
@@ -130,29 +104,35 @@ class TimerService {
     return Math.max(0, timeSync.now() - this.activeSession.startTime);
   }
 
-  getUntrackedElapsedMs() {
-    if (this.isActive()) return 0;
-    if (!this.lastSessionEndTime) return 0;
-    return Math.max(0, timeSync.now() - this.lastSessionEndTime);
-  }
+  // Get pre-fill start/end suggestion for claiming elapsed time
+  getSuggestedClaimTimes() {
+    const now = new Date();
+    const endMinutes = String(now.getMinutes()).padStart(2, '0');
+    const endHours = String(now.getHours()).padStart(2, '0');
+    const defaultEndTimeStr = `${endHours}:${endMinutes}`;
 
-  // Get Day Remaining Progress (Running out of time core metric)
-  getDayTimeRemaining() {
-    const now = new Date(timeSync.now());
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).getTime();
-    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
-
-    const totalDayMs = 24 * 3600 * 1000;
-    const elapsedDayMs = now.getTime() - startOfDay;
-    const remainingDayMs = Math.max(0, endOfDay - now.getTime());
-    const percentElapsed = Math.min(100, Math.max(0, (elapsedDayMs / totalDayMs) * 100));
+    let defaultStartTimeStr = '12:00';
+    if (this.lastSessionEndTime) {
+      const last = new Date(this.lastSessionEndTime);
+      // If last session was today
+      if (last.toDateString() === now.toDateString()) {
+        const sh = String(last.getHours()).padStart(2, '0');
+        const sm = String(last.getMinutes()).padStart(2, '0');
+        defaultStartTimeStr = `${sh}:${sm}`;
+      } else {
+        // Default to 1 hour ago
+        const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+        defaultStartTimeStr = `${String(oneHourAgo.getHours()).padStart(2, '0')}:${String(oneHourAgo.getMinutes()).padStart(2, '0')}`;
+      }
+    } else {
+      const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+      defaultStartTimeStr = `${String(oneHourAgo.getHours()).padStart(2, '0')}:${String(oneHourAgo.getMinutes()).padStart(2, '0')}`;
+    }
 
     return {
-      currentTimestamp: now.getTime(),
-      remainingMs: remainingDayMs,
-      remainingFormatted: formatTickerTime(remainingDayMs),
-      remainingHuman: formatHumanDuration(remainingDayMs),
-      percentElapsed: Math.round(percentElapsed * 10) / 10
+      dateStr: now.toISOString().split('T')[0],
+      startTimeStr: defaultStartTimeStr,
+      endTimeStr: defaultEndTimeStr
     };
   }
 
@@ -169,17 +149,18 @@ class TimerService {
   notifyTick() {
     const now = timeSync.now();
     const activeElapsed = this.getActiveElapsedMs();
-    const untrackedElapsed = this.getUntrackedElapsedMs();
-    const dayStats = this.getDayTimeRemaining();
+    const dayInfo = timeSync.getDayRemainingInfo();
 
     const tickPayload = {
       now,
-      currentTimeFormatted: formatTimeOfDay(now),
+      localTimeFormatted: timeSync.formatLocalTime(now),
+      localTime24: timeSync.format24HourTime(now),
       activeElapsedMs: activeElapsed,
       activeElapsedFormatted: formatTickerTime(activeElapsed),
-      untrackedElapsedMs: untrackedElapsed,
-      untrackedElapsedFormatted: formatTickerTime(untrackedElapsed),
-      dayStats,
+      dayRemainingMs: dayInfo.remainingMs,
+      dayRemainingFormatted: formatTickerTime(dayInfo.remainingMs),
+      dayRemainingHuman: formatHumanDuration(dayInfo.remainingMs),
+      dayPercentElapsed: dayInfo.percentElapsed,
       activeSession: this.activeSession,
       isTracking: this.isActive()
     };
