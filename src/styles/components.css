@@ -483,6 +483,65 @@
   font-weight: 600;
 }
 
+.m3-chip .chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  margin-left: 2px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+
+.m3-chip .chip-remove:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+/* Multi-Tag Editor Box */
+.multi-tag-box {
+  background-color: var(--md-sys-color-surface-container-low);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--shape-corner-lg);
+  padding: 16px;
+}
+
+.multi-tag-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.field-label-text {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--md-sys-color-outline);
+}
+
+.selected-tags-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 32px;
+  margin-bottom: 4px;
+}
+
+.session-tag-chip {
+  animation: fadeIn 0.15s ease;
+}
+
+.inline-add-tag-form .m3-text-field:focus {
+  border-color: var(--md-sys-color-tertiary);
+}
+
 .tracker-actions-row {
   display: flex;
   justify-content: center;

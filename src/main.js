@@ -88,8 +88,8 @@ class App {
           (completedSession) => {
             this.showSnackbar(`Recorded "${completedSession.title}" for ${formatHumanDuration(completedSession.durationMs)}`);
           },
-          (initialTitle) => {
-            this.openManualEntry({ isClaimMode: true, title: initialTitle });
+          (initialTags) => {
+            this.openManualEntry({ isClaimMode: true, tags: initialTags });
           }
         );
         break;

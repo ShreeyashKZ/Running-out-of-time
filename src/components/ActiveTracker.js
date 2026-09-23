@@ -9,6 +9,7 @@ export class ActiveTracker {
     this.onSessionCompleted = onSessionCompleted;
     this.onOpenClaimModal = onOpenClaimModal;
     this.tagsList = [];
+    this.selectedTags = new Set(['Attending class']); // default starting tag
     this.activeSession = timerService.getActiveSession();
     this.unsubscribeTick = null;
     this.unsubscribeState = null;
@@ -21,7 +22,6 @@ export class ActiveTracker {
     this.render();
     this.bindEvents();
 
-    // Subscribe to the device clock & day remaining ticker
     this.unsubscribeTick = timerService.onTick((tickData) => {
       this.updateTickingElements(tickData);
     });
@@ -40,11 +40,15 @@ export class ActiveTracker {
 
   render() {
     const isTracking = timerService.isActive();
-    const currentTitle = this.activeSession ? this.activeSession.title : '';
     const dayInfo = timeSync.getDayRemainingInfo();
     const now = Date.now();
     const syncInfo = timeSync.getSyncInfo();
-    const topQuickTags = this.tagsList.slice(0, 6);
+
+    // Quick tag suggestions that aren't already selected
+    const selectedLower = new Set(Array.from(this.selectedTags).map(t => t.toLowerCase()));
+    const suggestedTags = this.tagsList
+      .filter(t => !selectedLower.has((t.displayName || t.name).toLowerCase()))
+      .slice(0, 8);
 
     this.container.innerHTML = `
       <section class="tracker-view">
@@ -102,46 +106,89 @@ export class ActiveTracker {
             </div>
           </div>
 
-          <!-- Activity Input Section with Intelligent Autocomplete -->
-          <div class="tracker-input-section" style="margin-top: 18px;">
+          <!-- Multi-Tag / Multi-Title Section -->
+          <div class="tracker-tags-section" style="margin-top: 18px;">
             ${isTracking ? `
+              <!-- Active Session Multiple Tags Display & Dynamic Addition -->
               <div class="current-activity-banner">
-                <span class="banner-subtitle">Current Task</span>
-                <h2 class="banner-title">${escapeHTML(currentTitle)}</h2>
-                ${this.activeSession.tags && this.activeSession.tags.length > 0 ? `
-                  <div class="chips-container" style="justify-content: center; margin-top: 8px;">
-                    ${this.activeSession.tags.map(t => `<span class="m3-chip active">#${escapeHTML(t)}</span>`).join('')}
-                  </div>
-                ` : ''}
-              </div>
-            ` : `
-              <div class="m3-field-container">
-                <span class="material-symbols-rounded m3-field-icon">edit_note</span>
-                <input
-                  type="text"
-                  id="activityInput"
-                  class="m3-text-field"
-                  placeholder="What are you doing right now? (e.g. Attending class)"
-                  autocomplete="off"
-                  value="${escapeHTML(currentTitle)}"
-                />
-                <div id="autocompleteDropdown" class="m3-autocomplete-panel" style="display: none;"></div>
-              </div>
-
-              <!-- Quick Tag Suggestions from Memory -->
-              ${topQuickTags.length > 0 ? `
-                <div style="margin-top: 14px;">
-                  <div class="quick-tags-label">Recent Activities & Tags:</div>
-                  <div class="chips-container" id="quickChipsContainer">
-                    ${topQuickTags.map(t => `
-                      <button type="button" class="m3-chip quick-select-chip" data-title="${escapeHTML(t.displayName || t.name)}">
-                        <span class="material-symbols-rounded" style="font-size: 14px;">history</span>
-                        ${escapeHTML(t.displayName || t.name)}
-                      </button>
+                <span class="banner-subtitle">Session Activities & Tags</span>
+                <div class="active-session-tags-wrapper" style="margin-top: 8px;">
+                  <div class="chips-container" style="justify-content: center;" id="activeSessionChips">
+                    ${this.activeSession.tags.map(t => `
+                      <span class="m3-chip active" style="font-weight: 600;">
+                        <span class="material-symbols-rounded" style="font-size: 15px;">label</span>
+                        ${escapeHTML(t)}
+                        ${this.activeSession.tags.length > 1 ? `
+                          <span class="chip-remove btn-remove-active-tag" data-tag="${escapeHTML(t)}" title="Remove tag">×</span>
+                        ` : ''}
+                      </span>
                     `).join('')}
                   </div>
                 </div>
-              ` : ''}
+
+                <!-- Add another tag while tracking is live -->
+                <div style="margin-top: 12px; display: flex; justify-content: center;">
+                  <div class="inline-add-tag-form" style="position: relative; max-width: 320px; width: 100%;">
+                    <input
+                      type="text"
+                      id="inputAddActiveTag"
+                      class="m3-text-field"
+                      style="height: 38px; padding: 6px 14px 6px 36px; font-size: 0.88rem; border-radius: var(--shape-corner-full);"
+                      placeholder="+ Add another title/tag..."
+                      autocomplete="off"
+                    />
+                    <span class="material-symbols-rounded m3-field-icon" style="left: 10px; font-size: 18px;">add</span>
+                    <div id="activeTagAutocomplete" class="m3-autocomplete-panel" style="display: none;"></div>
+                  </div>
+                </div>
+              </div>
+            ` : `
+              <!-- Pre-Tracking Multi-Tag Editor -->
+              <div class="multi-tag-box">
+                <div class="multi-tag-header">
+                  <span class="field-label-text">Activities / Titles in this Session (Multiple Allowed):</span>
+                  <span style="font-size: 0.75rem; color: var(--md-sys-color-outline);">Press Enter or Comma to add</span>
+                </div>
+
+                <!-- Selected Tag Chips with Delete Action -->
+                <div class="selected-tags-strip" id="selectedTagsStrip">
+                  ${Array.from(this.selectedTags).map(tag => `
+                    <span class="m3-chip active session-tag-chip" data-tag="${escapeHTML(tag)}">
+                      <span class="material-symbols-rounded" style="font-size: 15px;">label</span>
+                      ${escapeHTML(tag)}
+                      <span class="chip-remove btn-remove-tag" data-tag="${escapeHTML(tag)}" title="Remove">×</span>
+                    </span>
+                  `).join('')}
+                </div>
+
+                <!-- Tag Input with Autocomplete -->
+                <div class="m3-field-container" style="margin-top: 8px;">
+                  <span class="material-symbols-rounded m3-field-icon">new_label</span>
+                  <input
+                    type="text"
+                    id="tagInput"
+                    class="m3-text-field"
+                    placeholder="Type an activity (e.g. Attending class, Math, Homework) and press Enter"
+                    autocomplete="off"
+                  />
+                  <div id="tagAutocompleteDropdown" class="m3-autocomplete-panel" style="display: none;"></div>
+                </div>
+
+                <!-- Quick Tag Suggestions from Memory -->
+                ${suggestedTags.length > 0 ? `
+                  <div style="margin-top: 12px;">
+                    <div class="quick-tags-label">Quick add past activities:</div>
+                    <div class="chips-container" id="quickChipsContainer">
+                      ${suggestedTags.map(t => `
+                        <button type="button" class="m3-chip quick-add-chip" data-title="${escapeHTML(t.displayName || t.name)}">
+                          <span class="material-symbols-rounded" style="font-size: 14px;">add</span>
+                          ${escapeHTML(t.displayName || t.name)}
+                        </button>
+                      `).join('')}
+                    </div>
+                  </div>
+                ` : ''}
+              </div>
             `}
           </div>
 
@@ -172,10 +219,10 @@ export class ActiveTracker {
             <span class="material-symbols-rounded">devices</span>
           </div>
           <div class="precision-content">
-            <h4>Synced with Device • 100% Offline</h4>
+            <h4>Multi-Title Time Tracking • Device Synced</h4>
             <p>
-              Synchronized directly with your host device's local clock and timezone (${syncInfo.timezone}).
-              No internet connection required. All activity sessions, tags, and stats remain securely stored on your device.
+              A single time session can carry multiple titles and tags. Each activity accumulates towards your weekly, 
+              monthly, and all-time leaderboards so you can measure everything you accomplish simultaneously.
             </p>
           </div>
         </div>
@@ -184,83 +231,176 @@ export class ActiveTracker {
   }
 
   bindEvents() {
-    const input = this.container.querySelector('#activityInput');
-    const dropdown = this.container.querySelector('#autocompleteDropdown');
+    const isTracking = timerService.isActive();
     const btnStart = this.container.querySelector('#btnStartTimer');
     const btnStop = this.container.querySelector('#btnStopTimer');
     const btnClaim = this.container.querySelector('#btnClaimElapsed');
-    const quickChips = this.container.querySelectorAll('.quick-select-chip');
 
-    // Quick Chip clicks
-    quickChips.forEach(chip => {
-      chip.addEventListener('click', () => {
-        const val = chip.getAttribute('data-title');
-        if (input) {
-          input.value = val;
-          input.focus();
-        }
-      });
-    });
+    // ==================== PRE-TRACKING TAG CONTROLS ====================
+    if (!isTracking) {
+      const tagInput = this.container.querySelector('#tagInput');
+      const dropdown = this.container.querySelector('#tagAutocompleteDropdown');
+      const removeButtons = this.container.querySelectorAll('.btn-remove-tag');
+      const quickAddChips = this.container.querySelectorAll('.quick-add-chip');
 
-    // Start Tracking Action
-    if (btnStart) {
-      btnStart.addEventListener('click', () => {
-        const title = input ? input.value.trim() : 'Attending class';
-        this.handleStart(title);
-      });
-    }
-
-    // Stop Tracking Action
-    if (btnStop) {
-      btnStop.addEventListener('click', async () => {
-        await this.handleStop();
-      });
-    }
-
-    // Claim Elapsed Time Action (Opens interface to select day, time and activity name)
-    if (btnClaim) {
-      btnClaim.addEventListener('click', () => {
-        const currentInputTitle = input ? input.value.trim() : '';
-        if (this.onOpenClaimModal) {
-          this.onOpenClaimModal(currentInputTitle);
-        }
-      });
-    }
-
-    // Autocomplete Input Handling
-    if (input && dropdown) {
-      input.addEventListener('input', () => {
-        this.renderAutocomplete(input.value.trim(), dropdown, input);
+      // Remove a tag from selected list
+      removeButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const tag = btn.getAttribute('data-tag');
+          this.selectedTags.delete(tag);
+          this.render();
+          this.bindEvents();
+        });
       });
 
-      input.addEventListener('focus', () => {
-        if (input.value.trim().length > 0) {
-          this.renderAutocomplete(input.value.trim(), dropdown, input);
-        }
-      });
-
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          const firstItem = dropdown.querySelector('.autocomplete-item');
-          if (firstItem && dropdown.style.display !== 'none') {
-            input.value = firstItem.getAttribute('data-val');
-            dropdown.style.display = 'none';
-          } else {
-            this.handleStart(input.value.trim());
+      // Quick add tag from suggestions
+      quickAddChips.forEach(chip => {
+        chip.addEventListener('click', () => {
+          const val = chip.getAttribute('data-title');
+          if (val) {
+            this.selectedTags.add(val);
+            this.render();
+            this.bindEvents();
           }
-        }
+        });
       });
 
-      document.addEventListener('click', (e) => {
-        if (!input.contains(e.target) && !dropdown.contains(e.target)) {
-          dropdown.style.display = 'none';
+      const addTagFromInput = () => {
+        if (!tagInput) return;
+        const val = tagInput.value.trim().replace(/^,+|,+$/g, '');
+        if (val) {
+          this.selectedTags.add(val);
+          tagInput.value = '';
+          if (dropdown) dropdown.style.display = 'none';
+          this.render();
+          this.bindEvents();
+          const newInput = this.container.querySelector('#tagInput');
+          if (newInput) newInput.focus();
         }
+      };
+
+      if (tagInput && dropdown) {
+        tagInput.addEventListener('input', () => {
+          const q = tagInput.value.trim();
+          if (q.includes(',')) {
+            addTagFromInput();
+            return;
+          }
+          this.renderAutocomplete(q, dropdown, (selectedTag) => {
+            this.selectedTags.add(selectedTag);
+            tagInput.value = '';
+            dropdown.style.display = 'none';
+            this.render();
+            this.bindEvents();
+          });
+        });
+
+        tagInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const firstItem = dropdown.querySelector('.autocomplete-item');
+            if (firstItem && dropdown.style.display !== 'none') {
+              this.selectedTags.add(firstItem.getAttribute('data-val'));
+              tagInput.value = '';
+              dropdown.style.display = 'none';
+              this.render();
+              this.bindEvents();
+            } else {
+              addTagFromInput();
+            }
+          }
+        });
+
+        document.addEventListener('click', (e) => {
+          if (!tagInput.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.style.display = 'none';
+          }
+        });
+      }
+
+      // Start Tracking Action
+      if (btnStart) {
+        btnStart.addEventListener('click', () => {
+          // If user typed something in the input without pressing Enter, add it now
+          if (tagInput && tagInput.value.trim()) {
+            this.selectedTags.add(tagInput.value.trim());
+          }
+
+          const tagsArray = Array.from(this.selectedTags).filter(Boolean);
+          const finalTags = tagsArray.length > 0 ? tagsArray : ['Attending class'];
+          timerService.startTimer(finalTags);
+          getAllTags().then(tags => this.tagsList = tags);
+        });
+      }
+
+      // Claim Elapsed Time Action
+      if (btnClaim) {
+        btnClaim.addEventListener('click', () => {
+          const currentTags = Array.from(this.selectedTags);
+          if (this.onOpenClaimModal) {
+            this.onOpenClaimModal(currentTags);
+          }
+        });
+      }
+    }
+
+    // ==================== ACTIVE TRACKING LIVE TAG CONTROLS ====================
+    if (isTracking) {
+      const activeInput = this.container.querySelector('#inputAddActiveTag');
+      const activeDropdown = this.container.querySelector('#activeTagAutocomplete');
+      const removeActiveButtons = this.container.querySelectorAll('.btn-remove-active-tag');
+
+      removeActiveButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const tag = btn.getAttribute('data-tag');
+          timerService.removeTagFromActiveSession(tag);
+        });
       });
+
+      if (activeInput && activeDropdown) {
+        activeInput.addEventListener('input', () => {
+          const q = activeInput.value.trim();
+          this.renderAutocomplete(q, activeDropdown, (selectedTag) => {
+            timerService.addTagToActiveSession(selectedTag);
+            activeInput.value = '';
+            activeDropdown.style.display = 'none';
+          });
+        });
+
+        activeInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const val = activeInput.value.trim();
+            if (val) {
+              timerService.addTagToActiveSession(val);
+              activeInput.value = '';
+              activeDropdown.style.display = 'none';
+            }
+          }
+        });
+
+        document.addEventListener('click', (e) => {
+          if (!activeInput.contains(e.target) && !activeDropdown.contains(e.target)) {
+            activeDropdown.style.display = 'none';
+          }
+        });
+      }
+
+      if (btnStop) {
+        btnStop.addEventListener('click', async () => {
+          const completed = await timerService.stopTimer();
+          if (completed && this.onSessionCompleted) {
+            this.onSessionCompleted(completed);
+          }
+          this.tagsList = await getAllTags();
+        });
+      }
     }
   }
 
-  renderAutocomplete(query, dropdown, input) {
+  renderAutocomplete(query, dropdown, onSelect) {
     if (!query) {
       dropdown.style.display = 'none';
       return;
@@ -284,7 +424,7 @@ export class ActiveTracker {
             <span>${highlighted}</span>
           </div>
           <span class="item-meta">
-            ${m.useCount > 1 ? `${m.useCount} times` : 'previously used'}
+            ${m.useCount > 1 ? `${m.useCount}x used` : 'previous'}
           </span>
         </div>
       `;
@@ -294,25 +434,10 @@ export class ActiveTracker {
 
     dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
       item.addEventListener('click', () => {
-        input.value = item.getAttribute('data-val');
-        dropdown.style.display = 'none';
-        input.focus();
+        const val = item.getAttribute('data-val');
+        onSelect(val);
       });
     });
-  }
-
-  handleStart(title) {
-    const actTitle = title || 'Attending class';
-    timerService.startTimer(actTitle, [actTitle.toLowerCase()]);
-    getAllTags().then(tags => this.tagsList = tags);
-  }
-
-  async handleStop() {
-    const completed = await timerService.stopTimer();
-    if (completed && this.onSessionCompleted) {
-      this.onSessionCompleted(completed);
-    }
-    this.tagsList = await getAllTags();
   }
 
   updateTickingElements(tickData) {

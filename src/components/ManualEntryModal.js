@@ -1,4 +1,4 @@
-// Claim Elapsed Time & Past Activity Logging Modal for "Running out of time"
+// Claim Elapsed Time & Past Activity Multi-Tag Logging Modal for "Running out of time"
 import { addSession, getAllTags } from '../services/db.js';
 import { formatHumanDuration, timerService } from '../services/timer.js';
 
@@ -8,6 +8,15 @@ export class ManualEntryModal {
     this.onSaved = onSaved;
     this.options = options;
     this.tagsList = [];
+
+    // Initialize tags set from options
+    let initialTags = ['Attending class'];
+    if (options.tags && Array.isArray(options.tags) && options.tags.length > 0) {
+      initialTags = options.tags;
+    } else if (options.title) {
+      initialTags = [options.title];
+    }
+    this.selectedTags = new Set(initialTags);
 
     this.init();
   }
@@ -29,7 +38,6 @@ export class ManualEntryModal {
     const defaultDate = this.options.date || suggested.dateStr;
     const defaultStart = this.options.startTime || suggested.startTimeStr;
     const defaultEnd = this.options.endTime || suggested.endTimeStr;
-    const initialTitle = this.options.title || '';
     const modalTitle = this.options.isClaimMode 
       ? 'Claim Elapsed Time' 
       : 'Log Past Activity';
@@ -40,7 +48,7 @@ export class ManualEntryModal {
           <div>
             <h3 class="dialog-title">${modalTitle}</h3>
             <p style="font-size: 0.82rem; color: var(--md-sys-color-outline); margin-top: 2px;">
-              Select the day and time interval to create a record for forgotten or untracked activities.
+              Select the day, time, and attach multiple activity titles/tags to this single session.
             </p>
           </div>
           <button class="m3-icon-button" id="btnManualClose">
@@ -50,22 +58,35 @@ export class ManualEntryModal {
 
         <form id="manualEntryForm">
           <div style="display: flex; flex-direction: column; gap: 16px;">
-            <!-- Activity Name with Autocomplete -->
-            <div class="m3-field-container">
+            <!-- Multi-Tag / Multi-Title Selector -->
+            <div>
               <label style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--md-sys-color-outline);">
-                Activity Name
+                Session Activities / Titles (Multiple Allowed)
               </label>
-              <span class="material-symbols-rounded m3-field-icon" style="top: 36px;">edit_note</span>
-              <input
-                type="text"
-                id="manualTitle"
-                class="m3-text-field"
-                placeholder="e.g. Attending class"
-                required
-                autocomplete="off"
-                value="${escapeHTML(initialTitle)}"
-              />
-              <div id="manualAutocomplete" class="m3-autocomplete-panel" style="display: none;"></div>
+
+              <!-- Selected Tags Strip -->
+              <div class="chips-container" id="modalSelectedTags" style="margin-bottom: 8px;">
+                ${Array.from(this.selectedTags).map(t => `
+                  <span class="m3-chip active modal-tag-chip" data-tag="${escapeHTML(t)}">
+                    <span class="material-symbols-rounded" style="font-size: 15px;">label</span>
+                    ${escapeHTML(t)}
+                    <span class="chip-remove btn-modal-remove-tag" data-tag="${escapeHTML(t)}" title="Remove">×</span>
+                  </span>
+                `).join('')}
+              </div>
+
+              <!-- Input for typing more tags with autocomplete -->
+              <div class="m3-field-container">
+                <span class="material-symbols-rounded m3-field-icon">new_label</span>
+                <input
+                  type="text"
+                  id="modalTagInput"
+                  class="m3-text-field"
+                  placeholder="Type an activity (e.g. Attending class, Math) and press Enter"
+                  autocomplete="off"
+                />
+                <div id="modalAutocomplete" class="m3-autocomplete-panel" style="display: none;"></div>
+              </div>
             </div>
 
             <!-- Day / Date Selection -->
@@ -117,8 +138,8 @@ export class ManualEntryModal {
     const form = this.modalContainer.querySelector('#manualEntryForm');
     const btnClose = this.modalContainer.querySelector('#btnManualClose');
     const btnCancel = this.modalContainer.querySelector('#btnManualCancel');
-    const inputTitle = this.modalContainer.querySelector('#manualTitle');
-    const dropdown = this.modalContainer.querySelector('#manualAutocomplete');
+    const tagInput = this.modalContainer.querySelector('#modalTagInput');
+    const dropdown = this.modalContainer.querySelector('#modalAutocomplete');
     const inputDate = this.modalContainer.querySelector('#manualDate');
     const inputStart = this.modalContainer.querySelector('#manualStartTime');
     const inputEnd = this.modalContainer.querySelector('#manualEndTime');
@@ -144,45 +165,97 @@ export class ManualEntryModal {
     inputEnd.addEventListener('change', updateDuration);
     updateDuration();
 
-    // Autocomplete on title input
-    inputTitle.addEventListener('input', () => {
-      const q = inputTitle.value.trim().toLowerCase();
-      if (!q) {
-        dropdown.style.display = 'none';
-        return;
-      }
-      const matches = this.tagsList.filter(t => (t.displayName || t.name).toLowerCase().includes(q));
-      if (matches.length === 0) {
-        dropdown.style.display = 'none';
-        return;
-      }
-
-      dropdown.innerHTML = matches.slice(0, 5).map(m => `
-        <div class="autocomplete-item" data-val="${escapeHTML(m.displayName || m.name)}">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span class="material-symbols-rounded" style="font-size: 16px; color: var(--md-sys-color-primary);">label</span>
-            <span>${escapeHTML(m.displayName || m.name)}</span>
-          </div>
-          <span style="font-size: 0.75rem; color: var(--md-sys-color-outline);">${m.useCount > 1 ? `${m.useCount}x` : ''}</span>
-        </div>
-      `).join('');
-      dropdown.style.display = 'block';
-
-      dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
-        item.addEventListener('click', () => {
-          inputTitle.value = item.getAttribute('data-val');
-          dropdown.style.display = 'none';
-          inputTitle.focus();
-        });
+    // Remove Tag Handlers
+    this.modalContainer.querySelectorAll('.btn-modal-remove-tag').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const t = btn.getAttribute('data-tag');
+        this.selectedTags.delete(t);
+        this.render();
+        this.bindEvents();
       });
     });
+
+    const addTag = (tag) => {
+      const clean = (tag || '').trim().replace(/^,+|,+$/g, '');
+      if (clean) {
+        this.selectedTags.add(clean);
+        this.render();
+        this.bindEvents();
+        const newInput = this.modalContainer.querySelector('#modalTagInput');
+        if (newInput) newInput.focus();
+      }
+    };
+
+    if (tagInput && dropdown) {
+      tagInput.addEventListener('input', () => {
+        const q = tagInput.value.trim().toLowerCase();
+        if (q.includes(',')) {
+          addTag(tagInput.value);
+          return;
+        }
+        if (!q) {
+          dropdown.style.display = 'none';
+          return;
+        }
+
+        const matches = this.tagsList.filter(t => (t.displayName || t.name).toLowerCase().includes(q));
+        if (matches.length === 0) {
+          dropdown.style.display = 'none';
+          return;
+        }
+
+        dropdown.innerHTML = matches.slice(0, 5).map(m => `
+          <div class="autocomplete-item" data-val="${escapeHTML(m.displayName || m.name)}">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="material-symbols-rounded" style="font-size: 16px; color: var(--md-sys-color-primary);">label</span>
+              <span>${escapeHTML(m.displayName || m.name)}</span>
+            </div>
+            <span style="font-size: 0.75rem; color: var(--md-sys-color-outline);">${m.useCount > 1 ? `${m.useCount}x` : ''}</span>
+          </div>
+        `).join('');
+        dropdown.style.display = 'block';
+
+        dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+          item.addEventListener('click', () => {
+            addTag(item.getAttribute('data-val'));
+          });
+        });
+      });
+
+      tagInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const firstItem = dropdown.querySelector('.autocomplete-item');
+          if (firstItem && dropdown.style.display !== 'none') {
+            addTag(firstItem.getAttribute('data-val'));
+          } else {
+            addTag(tagInput.value);
+          }
+        }
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!tagInput.contains(e.target) && !dropdown.contains(e.target)) {
+          dropdown.style.display = 'none';
+        }
+      });
+    }
 
     btnClose.addEventListener('click', () => this.close());
     btnCancel.addEventListener('click', () => this.close());
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const title = inputTitle.value.trim();
+
+      if (tagInput && tagInput.value.trim()) {
+        this.selectedTags.add(tagInput.value.trim());
+      }
+
+      const tagsArray = Array.from(this.selectedTags).filter(Boolean);
+      const finalTags = tagsArray.length > 0 ? tagsArray : ['Attending class'];
+      const title = finalTags.join(' • ');
+
       const dateStr = inputDate.value;
       const [sh, sm] = inputStart.value.split(':').map(Number);
       const [eh, em] = inputEnd.value.split(':').map(Number);
@@ -199,7 +272,7 @@ export class ManualEntryModal {
 
       const session = {
         title,
-        tags: [title.toLowerCase()],
+        tags: finalTags,
         startTime,
         endTime,
         durationMs,

@@ -28,31 +28,44 @@ export async function getAnalyticsData(periodType = PERIOD_TYPES.WEEKLY, customR
     const dur = session.durationMs || 0;
     totalTimeMs += dur;
 
-    // Normalize Activity Name
-    const normName = (session.title || 'Untitled').trim().toLowerCase();
-    const existing = activityMap.get(normName) || {
-      title: session.title || 'Untitled',
-      normName,
-      totalDurationMs: 0,
-      sessionCount: 0,
-      tags: new Set()
-    };
-    existing.totalDurationMs += dur;
-    existing.sessionCount += 1;
-    if (session.tags) {
-      session.tags.forEach(t => existing.tags.add(t));
-    }
-    activityMap.set(normName, existing);
+    // Multi-tag/title attribution: Credit each tag in the session with the duration
+    const sessionTags = Array.isArray(session.tags) && session.tags.length > 0
+      ? session.tags
+      : [session.title || 'Untitled'];
 
-    // Tag Map
-    if (session.tags && Array.isArray(session.tags)) {
-      session.tags.forEach(t => {
-        const normTag = t.trim().toLowerCase();
-        const tagStat = tagMap.get(normTag) || { tag: t, totalDurationMs: 0, count: 0 };
-        tagStat.totalDurationMs += dur;
-        tagStat.count += 1;
-        tagMap.set(normTag, tagStat);
+    // Track unique tags in this session to prevent duplicate counting within the same session
+    const seenTagsInSession = new Set();
+
+    for (const rawTag of sessionTags) {
+      const cleanTag = (rawTag || '').trim();
+      if (!cleanTag) continue;
+
+      const normTag = cleanTag.toLowerCase();
+      if (seenTagsInSession.has(normTag)) continue;
+      seenTagsInSession.add(normTag);
+
+      const existing = activityMap.get(normTag) || {
+        title: cleanTag, // preserve casing
+        normName: normTag,
+        totalDurationMs: 0,
+        sessionCount: 0,
+        relatedTags: new Set()
+      };
+
+      existing.totalDurationMs += dur;
+      existing.sessionCount += 1;
+      sessionTags.forEach(otherTag => {
+        if (otherTag && otherTag.trim().toLowerCase() !== normTag) {
+          existing.relatedTags.add(otherTag.trim());
+        }
       });
+      activityMap.set(normTag, existing);
+
+      // Also update tagMap for quick queries
+      const tagStat = tagMap.get(normTag) || { tag: cleanTag, totalDurationMs: 0, count: 0 };
+      tagStat.totalDurationMs += dur;
+      tagStat.count += 1;
+      tagMap.set(normTag, tagStat);
     }
 
     // Daily distribution

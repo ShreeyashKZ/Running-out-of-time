@@ -14,19 +14,16 @@ class TimerService {
   }
 
   async init() {
-    // Only rehydrate an active session if one was explicitly started before
     const saved = getActiveTimerState();
     if (saved && saved.isRunning && saved.startTime) {
       this.activeSession = saved;
     }
 
-    // Load last session to know when the user last tracked something
     const all = await getAllSessions();
     if (all.length > 0) {
       this.lastSessionEndTime = all[0].endTime || all[0].startTime;
     }
 
-    // Clock updates every second showing local device time and day remaining
     this.startMasterClock();
   }
 
@@ -40,11 +37,19 @@ class TimerService {
     this.notifyTick();
   }
 
-  startTimer(title = 'Attending class', tags = [], customStartTime = null) {
+  // Start tracking with multiple tags/titles
+  startTimer(tags = ['Attending class'], customStartTime = null) {
+    const cleanTags = Array.isArray(tags)
+      ? tags.map(t => t.trim()).filter(Boolean)
+      : [String(tags).trim()].filter(Boolean);
+
+    const finalTags = cleanTags.length > 0 ? cleanTags : ['Attending class'];
+    const primaryTitle = finalTags.join(' • ');
     const startTime = customStartTime || timeSync.now();
+
     const sessionData = {
-      title: title.trim() || 'Untitled Activity',
-      tags: Array.isArray(tags) ? tags : [tags].filter(Boolean),
+      title: primaryTitle,
+      tags: finalTags,
       startTime: startTime,
       isRunning: true,
       notes: ''
@@ -55,6 +60,33 @@ class TimerService {
     this.notifyState();
     this.notifyTick();
     return this.activeSession;
+  }
+
+  // Add a tag to active running session dynamically
+  addTagToActiveSession(tag) {
+    if (!this.activeSession || !tag) return;
+    const clean = tag.trim();
+    if (!clean) return;
+
+    if (!this.activeSession.tags.some(t => t.toLowerCase() === clean.toLowerCase())) {
+      this.activeSession.tags.push(clean);
+      this.activeSession.title = this.activeSession.tags.join(' • ');
+      saveActiveTimerState(this.activeSession);
+      this.notifyState();
+      this.notifyTick();
+    }
+  }
+
+  // Remove a tag from active running session dynamically
+  removeTagFromActiveSession(tag) {
+    if (!this.activeSession || this.activeSession.tags.length <= 1) return;
+    this.activeSession.tags = this.activeSession.tags.filter(
+      t => t.toLowerCase() !== tag.toLowerCase()
+    );
+    this.activeSession.title = this.activeSession.tags.join(' • ');
+    saveActiveTimerState(this.activeSession);
+    this.notifyState();
+    this.notifyTick();
   }
 
   async stopTimer() {
@@ -79,9 +111,7 @@ class TimerService {
     // Save to IndexedDB
     await addSession(completedSession);
 
-    // Update last session end time
     this.lastSessionEndTime = endTime;
-
     this.activeSession = null;
     saveActiveTimerState(null);
 
@@ -104,7 +134,6 @@ class TimerService {
     return Math.max(0, timeSync.now() - this.activeSession.startTime);
   }
 
-  // Get pre-fill start/end suggestion for claiming elapsed time
   getSuggestedClaimTimes() {
     const now = new Date();
     const endMinutes = String(now.getMinutes()).padStart(2, '0');
@@ -114,13 +143,11 @@ class TimerService {
     let defaultStartTimeStr = '12:00';
     if (this.lastSessionEndTime) {
       const last = new Date(this.lastSessionEndTime);
-      // If last session was today
       if (last.toDateString() === now.toDateString()) {
         const sh = String(last.getHours()).padStart(2, '0');
         const sm = String(last.getMinutes()).padStart(2, '0');
         defaultStartTimeStr = `${sh}:${sm}`;
       } else {
-        // Default to 1 hour ago
         const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
         defaultStartTimeStr = `${String(oneHourAgo.getHours()).padStart(2, '0')}:${String(oneHourAgo.getMinutes()).padStart(2, '0')}`;
       }
