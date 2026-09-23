@@ -37,19 +37,26 @@ class TimerService {
     this.notifyTick();
   }
 
-  // Start tracking with multiple tags/titles
-  startTimer(tags = ['Attending class'], customStartTime = null) {
+  // Start tracking with multiple tags and an explicit or derived title
+  startTimer(tags = ['Attending class'], customStartTime = null, explicitTitle = null) {
     const cleanTags = Array.isArray(tags)
       ? tags.map(t => t.trim()).filter(Boolean)
       : [String(tags).trim()].filter(Boolean);
 
-    const finalTags = cleanTags.length > 0 ? cleanTags : ['Attending class'];
-    const primaryTitle = finalTags.join(' • ');
+    const title = (explicitTitle && explicitTitle.trim())
+      ? explicitTitle.trim()
+      : (cleanTags[0] || 'Attending class');
+
+    // Ensure title is included in tags for full leaderboard tracking
+    if (!cleanTags.some(t => t.toLowerCase() === title.toLowerCase())) {
+      cleanTags.unshift(title);
+    }
+
     const startTime = customStartTime || timeSync.now();
 
     const sessionData = {
-      title: primaryTitle,
-      tags: finalTags,
+      title: title,
+      tags: cleanTags,
       startTime: startTime,
       isRunning: true,
       notes: ''
@@ -62,6 +69,27 @@ class TimerService {
     return this.activeSession;
   }
 
+  // Update session title directly
+  setSessionTitle(newTitle) {
+    if (!this.activeSession || !newTitle) return;
+    const clean = newTitle.trim();
+    if (!clean) return;
+
+    this.activeSession.title = clean;
+    if (!this.activeSession.tags.some(t => t.toLowerCase() === clean.toLowerCase())) {
+      this.activeSession.tags.unshift(clean);
+    }
+    saveActiveTimerState(this.activeSession);
+    this.notifyState();
+    this.notifyTick();
+  }
+
+  // Make an existing tag the session title
+  setTitleFromTag(tag) {
+    if (!this.activeSession || !tag) return;
+    this.setSessionTitle(tag);
+  }
+
   // Add a tag to active running session dynamically
   addTagToActiveSession(tag) {
     if (!this.activeSession || !tag) return;
@@ -70,7 +98,6 @@ class TimerService {
 
     if (!this.activeSession.tags.some(t => t.toLowerCase() === clean.toLowerCase())) {
       this.activeSession.tags.push(clean);
-      this.activeSession.title = this.activeSession.tags.join(' • ');
       saveActiveTimerState(this.activeSession);
       this.notifyState();
       this.notifyTick();

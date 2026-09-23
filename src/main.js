@@ -177,11 +177,13 @@ class App {
 
     timerService.onStateChange((activeSession) => {
       if (activeSession && activeSession.isRunning) {
+        document.documentElement.setAttribute('data-session-state', 'active');
         headerStatus.classList.add('active');
         headerStatusLabel.textContent = 'Tracking Live';
         if (quickActivityName) quickActivityName.textContent = activeSession.title;
         this.updateQuickBarVisibility();
       } else {
+        document.documentElement.setAttribute('data-session-state', 'idle');
         headerStatus.classList.remove('active');
         headerStatusLabel.textContent = 'Idle';
         document.title = 'Running out of time';
@@ -191,11 +193,14 @@ class App {
 
     // Check initial state
     if (timerService.isActive()) {
+      document.documentElement.setAttribute('data-session-state', 'active');
       const active = timerService.getActiveSession();
       headerStatus.classList.add('active');
       headerStatusLabel.textContent = 'Tracking Live';
       if (quickActivityName) quickActivityName.textContent = active.title;
       this.updateQuickBarVisibility();
+    } else {
+      document.documentElement.setAttribute('data-session-state', 'idle');
     }
   }
 

@@ -17,52 +17,161 @@
   --motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
   --motion-duration-short: 150ms;
   --motion-duration-medium: 300ms;
-  --motion-duration-long: 500ms;
+  --motion-duration-long: 600ms;
 }
 
-/* Material 3 Dark Theme - Precision Obsidian & Slate */
+/* ====================================================================
+   CALM LIGHT COLOR SHADES (Dynamic transitions on Start and Close)
+   ==================================================================== */
+
+/* 1. CLOSED / IDLE SESSION (Calm Morning Mist / Soft Lavender Slate) */
+[data-session-state="idle"],
+html:not([data-session-state="active"]):not([data-theme="dark"]) {
+  --md-sys-color-surface: #f5f6fa;
+  --md-sys-color-on-surface: #1e2029;
+  --md-sys-color-surface-variant: #e2e5f0;
+  --md-sys-color-on-surface-variant: #494d5d;
+  --md-sys-color-outline: #777c90;
+  --md-sys-color-outline-variant: rgba(30, 32, 41, 0.08);
+
+  --md-sys-color-surface-dim: #e8ebf3;
+  --md-sys-color-surface-bright: #ffffff;
+  --md-sys-color-surface-container-lowest: #ffffff;
+  --md-sys-color-surface-container-low: #f0f2f8;
+  --md-sys-color-surface-container: #eaecf5;
+  --md-sys-color-surface-container-high: #e3e6f0;
+  --md-sys-color-surface-container-highest: #d9dce8;
+
+  --md-sys-color-primary: #475a80;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #dbe4f8;
+  --md-sys-color-on-primary-container: #0f192b;
+  --md-sys-color-primary-glow: rgba(71, 90, 128, 0.14);
+
+  --md-sys-color-secondary: #5a6072;
+  --md-sys-color-on-secondary: #ffffff;
+  --md-sys-color-secondary-container: #e1e4f0;
+  --md-sys-color-on-secondary-container: #171b26;
+
+  --md-sys-color-tertiary: #41756f;
+  --md-sys-color-on-tertiary: #ffffff;
+  --md-sys-color-tertiary-container: #cbe9e4;
+  --md-sys-color-on-tertiary-container: #07221e;
+
+  --md-sys-color-error: #ba1a1a;
+  --md-sys-color-on-error: #ffffff;
+  --md-sys-color-error-container: #ffdad6;
+  --md-sys-color-on-error-container: #410002;
+
+  --md-sys-color-inverse-surface: #2e3038;
+  --md-sys-color-inverse-on-surface: #f1f1f8;
+
+  --podium-gold-border: #b8860b;
+  --podium-gold-bg: rgba(184, 134, 11, 0.08);
+  --podium-silver-border: #607d8b;
+  --podium-silver-bg: rgba(96, 125, 139, 0.08);
+  --podium-bronze-border: #a0522d;
+  --podium-bronze-bg: rgba(160, 82, 45, 0.08);
+
+  --timer-pulse-color: #41756f;
+  --card-shadow: 0 4px 20px rgba(71, 90, 128, 0.07);
+  --dialog-shadow: 0 16px 44px rgba(71, 90, 128, 0.15);
+}
+
+/* 2. ACTIVE SESSION STARTED (Calm Soothing Sage & Mint Light Shades) */
+[data-session-state="active"]:not([data-theme="dark"]) {
+  --md-sys-color-surface: #f2f7f4;
+  --md-sys-color-on-surface: #192520;
+  --md-sys-color-surface-variant: #dde8e1;
+  --md-sys-color-on-surface-variant: #3e5047;
+  --md-sys-color-outline: #6b8277;
+  --md-sys-color-outline-variant: rgba(25, 37, 32, 0.08);
+
+  --md-sys-color-surface-dim: #e4efe7;
+  --md-sys-color-surface-bright: #ffffff;
+  --md-sys-color-surface-container-lowest: #ffffff;
+  --md-sys-color-surface-container-low: #ebf4ee;
+  --md-sys-color-surface-container: #e4eee7;
+  --md-sys-color-surface-container-high: #dbe7df;
+  --md-sys-color-surface-container-highest: #d0dfd5;
+
+  --md-sys-color-primary: #2b674d;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #d3f3e1;
+  --md-sys-color-on-primary-container: #052115;
+  --md-sys-color-primary-glow: rgba(43, 103, 77, 0.16);
+
+  --md-sys-color-secondary: #4f6356;
+  --md-sys-color-on-secondary: #ffffff;
+  --md-sys-color-secondary-container: #d9e6dc;
+  --md-sys-color-on-secondary-container: #101e16;
+
+  --md-sys-color-tertiary: #197866;
+  --md-sys-color-on-tertiary: #ffffff;
+  --md-sys-color-tertiary-container: #c4f2e6;
+  --md-sys-color-on-tertiary-container: #00201b;
+
+  --md-sys-color-error: #ba1a1a;
+  --md-sys-color-on-error: #ffffff;
+  --md-sys-color-error-container: #ffdad6;
+  --md-sys-color-on-error-container: #410002;
+
+  --md-sys-color-inverse-surface: #2b332e;
+  --md-sys-color-inverse-on-surface: #eef5f0;
+
+  --podium-gold-border: #a87900;
+  --podium-gold-bg: rgba(168, 121, 0, 0.08);
+  --podium-silver-border: #526f63;
+  --podium-silver-bg: rgba(82, 111, 99, 0.08);
+  --podium-bronze-border: #994d2c;
+  --podium-bronze-bg: rgba(153, 77, 44, 0.08);
+
+  --timer-pulse-color: #197866;
+  --card-shadow: 0 4px 22px rgba(43, 103, 77, 0.08);
+  --dialog-shadow: 0 16px 44px rgba(43, 103, 77, 0.16);
+}
+
+/* 3. OPTIONAL CALM DARK MODE (when user explicitly prefers dark) */
 [data-theme="dark"] {
-  --md-sys-color-primary: #c4c7e8;
-  --md-sys-color-on-primary: #2d304f;
-  --md-sys-color-primary-container: #434667;
-  --md-sys-color-on-primary-container: #e1e3ff;
-  --md-sys-color-primary-glow: rgba(196, 199, 232, 0.16);
+  --md-sys-color-primary: #b8c8be;
+  --md-sys-color-on-primary: #21352b;
+  --md-sys-color-primary-container: #374b40;
+  --md-sys-color-on-primary-container: #d4e5da;
+  --md-sys-color-primary-glow: rgba(184, 200, 190, 0.15);
 
-  --md-sys-color-secondary: #c7c5d0;
-  --md-sys-color-on-secondary: #2f3038;
-  --md-sys-color-secondary-container: #3d3e48;
-  --md-sys-color-on-secondary-container: #e3e1ec;
+  --md-sys-color-secondary: #bcc7be;
+  --md-sys-color-on-secondary: #27332b;
+  --md-sys-color-secondary-container: #3d4a41;
+  --md-sys-color-on-secondary-container: #d8e3da;
 
-  --md-sys-color-tertiary: #80d4c5;
-  --md-sys-color-on-tertiary: #003731;
+  --md-sys-color-tertiary: #84d8c7;
+  --md-sys-color-on-tertiary: #003730;
   --md-sys-color-tertiary-container: #005047;
-  --md-sys-color-on-tertiary-container: #9cf1e1;
+  --md-sys-color-on-tertiary-container: #a1f5e3;
 
   --md-sys-color-error: #f2b8b5;
   --md-sys-color-on-error: #601410;
   --md-sys-color-error-container: #8c1d18;
   --md-sys-color-on-error-container: #f9dedc;
 
-  --md-sys-color-surface: #0f0f12;
-  --md-sys-color-on-surface: #e5e1e6;
-  --md-sys-color-surface-variant: #46464f;
-  --md-sys-color-on-surface-variant: #c7c5d0;
-  --md-sys-color-outline: #90909a;
+  --md-sys-color-surface: #101412;
+  --md-sys-color-on-surface: #e1e4e1;
+  --md-sys-color-surface-variant: #424944;
+  --md-sys-color-on-surface-variant: #c2c9c3;
+  --md-sys-color-outline: #8c938d;
   --md-sys-color-outline-variant: rgba(255, 255, 255, 0.08);
 
-  /* Precise Elevation Surfaces */
-  --md-sys-color-surface-dim: #0f0f12;
-  --md-sys-color-surface-bright: #35353c;
-  --md-sys-color-surface-container-lowest: #0a0a0d;
-  --md-sys-color-surface-container-low: #17171c;
-  --md-sys-color-surface-container: #1c1c22;
-  --md-sys-color-surface-container-high: #23232a;
-  --md-sys-color-surface-container-highest: #2b2b33;
+  --md-sys-color-surface-dim: #101412;
+  --md-sys-color-surface-bright: #363b38;
+  --md-sys-color-surface-container-lowest: #0b0f0d;
+  --md-sys-color-surface-container-low: #181d1a;
+  --md-sys-color-surface-container: #1d211e;
+  --md-sys-color-surface-container-high: #272b28;
+  --md-sys-color-surface-container-highest: #323633;
 
-  --md-sys-color-inverse-surface: #e5e1e6;
-  --md-sys-color-inverse-on-surface: #303036;
+  --md-sys-color-inverse-surface: #e1e4e1;
+  --md-sys-color-inverse-on-surface: #2d312f;
 
-  /* Precision Podium & Medal Tones */
   --podium-gold-border: #f0c05a;
   --podium-gold-bg: rgba(240, 192, 90, 0.12);
   --podium-silver-border: #9fa8b0;
@@ -70,60 +179,7 @@
   --podium-bronze-border: #d48a6a;
   --podium-bronze-bg: rgba(212, 138, 106, 0.12);
 
-  --timer-pulse-color: #80d4c5;
+  --timer-pulse-color: #84d8c7;
   --card-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
   --dialog-shadow: 0 20px 48px rgba(0, 0, 0, 0.7);
-}
-
-/* Material 3 Light Theme */
-[data-theme="light"] {
-  --md-sys-color-primary: #5a5d7e;
-  --md-sys-color-on-primary: #ffffff;
-  --md-sys-color-primary-container: #e1e3ff;
-  --md-sys-color-on-primary-container: #171a37;
-  --md-sys-color-primary-glow: rgba(90, 93, 126, 0.14);
-
-  --md-sys-color-secondary: #5e5d67;
-  --md-sys-color-on-secondary: #ffffff;
-  --md-sys-color-secondary-container: #e3e1ec;
-  --md-sys-color-on-secondary-container: #1b1b23;
-
-  --md-sys-color-tertiary: #006a5e;
-  --md-sys-color-on-tertiary: #ffffff;
-  --md-sys-color-tertiary-container: #9cf1e1;
-  --md-sys-color-on-tertiary-container: #00201c;
-
-  --md-sys-color-error: #ba1a1a;
-  --md-sys-color-on-error: #ffffff;
-  --md-sys-color-error-container: #ffdad6;
-  --md-sys-color-on-error-container: #410002;
-
-  --md-sys-color-surface: #fdf8fd;
-  --md-sys-color-on-surface: #1b1b1f;
-  --md-sys-color-surface-variant: #e3e1ec;
-  --md-sys-color-on-surface-variant: #46464f;
-  --md-sys-color-outline: #777680;
-  --md-sys-color-outline-variant: rgba(0, 0, 0, 0.08);
-
-  --md-sys-color-surface-dim: #ded8de;
-  --md-sys-color-surface-bright: #fdf8fd;
-  --md-sys-color-surface-container-lowest: #ffffff;
-  --md-sys-color-surface-container-low: #f7f2f7;
-  --md-sys-color-surface-container: #f1ecf2;
-  --md-sys-color-surface-container-high: #ebe6ec;
-  --md-sys-color-surface-container-highest: #e5e0e6;
-
-  --md-sys-color-inverse-surface: #303034;
-  --md-sys-color-inverse-on-surface: #f3eff4;
-
-  --podium-gold-border: #b8860b;
-  --podium-gold-bg: rgba(184, 134, 11, 0.1);
-  --podium-silver-border: #607d8b;
-  --podium-silver-bg: rgba(96, 125, 139, 0.1);
-  --podium-bronze-border: #a0522d;
-  --podium-bronze-bg: rgba(160, 82, 45, 0.1);
-
-  --timer-pulse-color: #006a5e;
-  --card-shadow: 0 2px 14px rgba(0, 0, 0, 0.06);
-  --dialog-shadow: 0 16px 40px rgba(0, 0, 0, 0.14);
 }

@@ -9,13 +9,16 @@ export class ManualEntryModal {
     this.options = options;
     this.tagsList = [];
 
-    // Initialize tags set from options
-    let initialTags = ['Attending class'];
-    if (options.tags && Array.isArray(options.tags) && options.tags.length > 0) {
-      initialTags = options.tags;
-    } else if (options.title) {
-      initialTags = [options.title];
+    // Title and tags setup
+    let initialTitle = 'Attending class';
+    let initialTags = [];
+
+    if (typeof options === 'object') {
+      if (options.title) initialTitle = options.title;
+      if (Array.isArray(options.tags)) initialTags = options.tags.filter(t => t !== initialTitle);
     }
+
+    this.sessionTitle = initialTitle;
     this.selectedTags = new Set(initialTags);
 
     this.init();
@@ -42,13 +45,15 @@ export class ManualEntryModal {
       ? 'Claim Elapsed Time' 
       : 'Log Past Activity';
 
+    const topSuggestions = this.tagsList.slice(0, 6);
+
     this.modalContainer.innerHTML = `
-      <div class="m3-dialog">
+      <div class="m3-dialog" style="max-height: 90vh; overflow-y: auto;">
         <div class="dialog-header">
           <div>
             <h3 class="dialog-title">${modalTitle}</h3>
             <p style="font-size: 0.82rem; color: var(--md-sys-color-outline); margin-top: 2px;">
-              Select the day, time, and attach multiple activity titles/tags to this single session.
+              Specify your session title, attach tags, or turn any tag into your title.
             </p>
           </div>
           <button class="m3-icon-button" id="btnManualClose">
@@ -58,35 +63,85 @@ export class ManualEntryModal {
 
         <form id="manualEntryForm">
           <div style="display: flex; flex-direction: column; gap: 16px;">
-            <!-- Multi-Tag / Multi-Title Selector -->
-            <div>
+            <!-- 1. Session Title -->
+            <div class="session-title-section">
               <label style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--md-sys-color-outline);">
-                Session Activities / Titles (Multiple Allowed)
+                Session Title
+              </label>
+              <div class="m3-field-container">
+                <span class="material-symbols-rounded m3-field-icon">edit_note</span>
+                <input
+                  type="text"
+                  id="modalSessionTitle"
+                  class="m3-text-field"
+                  placeholder="e.g. Attending class, Math Lecture"
+                  required
+                  autocomplete="off"
+                  value="${escapeHTML(this.sessionTitle)}"
+                />
+                <div id="modalTitleAutocomplete" class="m3-autocomplete-panel" style="display: none;"></div>
+              </div>
+            </div>
+
+            <!-- 2. Attached Tags -->
+            <div class="session-tags-section">
+              <label style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--md-sys-color-outline);">
+                Attached Tags (Sub-activities)
               </label>
 
-              <!-- Selected Tags Strip -->
+              <!-- Selected Tags Strip with Make Title & Remove -->
               <div class="chips-container" id="modalSelectedTags" style="margin-bottom: 8px;">
-                ${Array.from(this.selectedTags).map(t => `
+                ${Array.from(this.selectedTags).length === 0 ? `
+                  <span style="font-size: 0.78rem; color: var(--md-sys-color-outline); font-style: italic;">
+                    No additional tags added yet.
+                  </span>
+                ` : Array.from(this.selectedTags).map(t => `
                   <span class="m3-chip active modal-tag-chip" data-tag="${escapeHTML(t)}">
-                    <span class="material-symbols-rounded" style="font-size: 15px;">label</span>
-                    ${escapeHTML(t)}
-                    <span class="chip-remove btn-modal-remove-tag" data-tag="${escapeHTML(t)}" title="Remove">×</span>
+                    <span class="material-symbols-rounded" style="font-size: 14px;">label</span>
+                    <span>${escapeHTML(t)}</span>
+                    <button type="button" class="btn-modal-make-title" data-tag="${escapeHTML(t)}" title="Make this tag the title" style="background:none;border:none;color:inherit;cursor:pointer;display:inline-flex;align-items:center;margin-left:4px;opacity:0.8;">
+                      <span class="material-symbols-rounded" style="font-size: 14px;">arrow_upward</span>
+                    </button>
+                    <span class="chip-remove btn-modal-remove-tag" data-tag="${escapeHTML(t)}" title="Remove tag">×</span>
                   </span>
                 `).join('')}
               </div>
 
-              <!-- Input for typing more tags with autocomplete -->
+              <!-- Input for typing more tags -->
               <div class="m3-field-container">
-                <span class="material-symbols-rounded m3-field-icon">new_label</span>
+                <span class="material-symbols-rounded m3-field-icon">add</span>
                 <input
                   type="text"
                   id="modalTagInput"
                   class="m3-text-field"
-                  placeholder="Type an activity (e.g. Attending class, Math) and press Enter"
+                  placeholder="+ Type a tag and press Enter"
                   autocomplete="off"
                 />
-                <div id="modalAutocomplete" class="m3-autocomplete-panel" style="display: none;"></div>
+                <div id="modalTagAutocomplete" class="m3-autocomplete-panel" style="display: none;"></div>
               </div>
+
+              <!-- Quick suggestions -->
+              ${topSuggestions.length > 0 ? `
+                <div style="margin-top: 10px;">
+                  <div class="quick-tags-label" style="font-size: 0.75rem;">Click to use as Title or add as Tag:</div>
+                  <div class="dual-suggestion-chips-grid">
+                    ${topSuggestions.map(t => {
+                      const name = t.displayName || t.name;
+                      return `
+                        <div class="suggestion-pill">
+                          <button type="button" class="pill-title-action btn-modal-set-title" data-name="${escapeHTML(name)}" title="Set as Title">
+                            <span class="material-symbols-rounded" style="font-size: 13px;">edit</span>
+                            <span>${escapeHTML(name)}</span>
+                          </button>
+                          <button type="button" class="pill-tag-action btn-modal-add-tag" data-name="${escapeHTML(name)}" title="Add as Tag">
+                            <span class="material-symbols-rounded" style="font-size: 13px;">add</span>
+                          </button>
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>
+                </div>
+              ` : ''}
             </div>
 
             <!-- Day / Date Selection -->
@@ -138,8 +193,8 @@ export class ManualEntryModal {
     const form = this.modalContainer.querySelector('#manualEntryForm');
     const btnClose = this.modalContainer.querySelector('#btnManualClose');
     const btnCancel = this.modalContainer.querySelector('#btnManualCancel');
+    const titleInput = this.modalContainer.querySelector('#modalSessionTitle');
     const tagInput = this.modalContainer.querySelector('#modalTagInput');
-    const dropdown = this.modalContainer.querySelector('#modalAutocomplete');
     const inputDate = this.modalContainer.querySelector('#manualDate');
     const inputStart = this.modalContainer.querySelector('#manualStartTime');
     const inputEnd = this.modalContainer.querySelector('#manualEndTime');
@@ -155,7 +210,7 @@ export class ManualEntryModal {
 
       let startMin = sh * 60 + sm;
       let endMin = eh * 60 + em;
-      if (endMin < startMin) endMin += 24 * 60; // Crosses midnight
+      if (endMin < startMin) endMin += 24 * 60;
 
       const diffMs = (endMin - startMin) * 60 * 1000;
       preview.textContent = formatHumanDuration(diffMs);
@@ -164,6 +219,25 @@ export class ManualEntryModal {
     inputStart.addEventListener('change', updateDuration);
     inputEnd.addEventListener('change', updateDuration);
     updateDuration();
+
+    if (titleInput) {
+      titleInput.addEventListener('input', () => {
+        this.sessionTitle = titleInput.value;
+      });
+    }
+
+    // Make Tag the Title inside Modal
+    this.modalContainer.querySelectorAll('.btn-modal-make-title').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const tag = btn.getAttribute('data-tag');
+        if (tag) {
+          this.sessionTitle = tag;
+          this.render();
+          this.bindEvents();
+        }
+      });
+    });
 
     // Remove Tag Handlers
     this.modalContainer.querySelectorAll('.btn-modal-remove-tag').forEach(btn => {
@@ -176,68 +250,40 @@ export class ManualEntryModal {
       });
     });
 
-    const addTag = (tag) => {
-      const clean = (tag || '').trim().replace(/^,+|,+$/g, '');
-      if (clean) {
-        this.selectedTags.add(clean);
-        this.render();
-        this.bindEvents();
-        const newInput = this.modalContainer.querySelector('#modalTagInput');
-        if (newInput) newInput.focus();
-      }
-    };
-
-    if (tagInput && dropdown) {
-      tagInput.addEventListener('input', () => {
-        const q = tagInput.value.trim().toLowerCase();
-        if (q.includes(',')) {
-          addTag(tagInput.value);
-          return;
+    // Quick Suggestion actions
+    this.modalContainer.querySelectorAll('.btn-modal-set-title').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const name = btn.getAttribute('data-name');
+        if (name) {
+          this.sessionTitle = name;
+          this.render();
+          this.bindEvents();
         }
-        if (!q) {
-          dropdown.style.display = 'none';
-          return;
-        }
-
-        const matches = this.tagsList.filter(t => (t.displayName || t.name).toLowerCase().includes(q));
-        if (matches.length === 0) {
-          dropdown.style.display = 'none';
-          return;
-        }
-
-        dropdown.innerHTML = matches.slice(0, 5).map(m => `
-          <div class="autocomplete-item" data-val="${escapeHTML(m.displayName || m.name)}">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span class="material-symbols-rounded" style="font-size: 16px; color: var(--md-sys-color-primary);">label</span>
-              <span>${escapeHTML(m.displayName || m.name)}</span>
-            </div>
-            <span style="font-size: 0.75rem; color: var(--md-sys-color-outline);">${m.useCount > 1 ? `${m.useCount}x` : ''}</span>
-          </div>
-        `).join('');
-        dropdown.style.display = 'block';
-
-        dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
-          item.addEventListener('click', () => {
-            addTag(item.getAttribute('data-val'));
-          });
-        });
       });
+    });
 
+    this.modalContainer.querySelectorAll('.btn-modal-add-tag').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const name = btn.getAttribute('data-name');
+        if (name) {
+          this.selectedTags.add(name);
+          this.render();
+          this.bindEvents();
+        }
+      });
+    });
+
+    // Tag input on Enter
+    if (tagInput) {
       tagInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
           e.preventDefault();
-          const firstItem = dropdown.querySelector('.autocomplete-item');
-          if (firstItem && dropdown.style.display !== 'none') {
-            addTag(firstItem.getAttribute('data-val'));
-          } else {
-            addTag(tagInput.value);
+          const clean = tagInput.value.trim().replace(/^,+|,+$/g, '');
+          if (clean) {
+            this.selectedTags.add(clean);
+            this.render();
+            this.bindEvents();
           }
-        }
-      });
-
-      document.addEventListener('click', (e) => {
-        if (!tagInput.contains(e.target) && !dropdown.contains(e.target)) {
-          dropdown.style.display = 'none';
         }
       });
     }
@@ -248,13 +294,12 @@ export class ManualEntryModal {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      if (tagInput && tagInput.value.trim()) {
-        this.selectedTags.add(tagInput.value.trim());
-      }
-
+      const title = this.sessionTitle.trim() || 'Attending class';
       const tagsArray = Array.from(this.selectedTags).filter(Boolean);
-      const finalTags = tagsArray.length > 0 ? tagsArray : ['Attending class'];
-      const title = finalTags.join(' • ');
+
+      if (!tagsArray.some(t => t.toLowerCase() === title.toLowerCase())) {
+        tagsArray.unshift(title);
+      }
 
       const dateStr = inputDate.value;
       const [sh, sm] = inputStart.value.split(':').map(Number);
@@ -272,7 +317,7 @@ export class ManualEntryModal {
 
       const session = {
         title,
-        tags: finalTags,
+        tags: tagsArray,
         startTime,
         endTime,
         durationMs,

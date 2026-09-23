@@ -503,26 +503,32 @@
   background-color: rgba(0, 0, 0, 0.2);
 }
 
-/* Multi-Tag Editor Box */
-.multi-tag-box {
+/* Multi-Tag & Session Setup Box */
+.session-setup-card {
   background-color: var(--md-sys-color-surface-container-low);
   border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: var(--shape-corner-lg);
-  padding: 16px;
+  padding: 18px;
 }
 
-.multi-tag-header {
+.field-label-row {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
   flex-wrap: wrap;
   gap: 6px;
 }
 
 .field-label-text {
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 700;
+  color: var(--md-sys-color-on-surface);
+  letter-spacing: 0.2px;
+}
+
+.field-sublabel-text {
+  font-size: 0.74rem;
   color: var(--md-sys-color-outline);
 }
 
@@ -536,6 +542,75 @@
 
 .session-tag-chip {
   animation: fadeIn 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-make-tag-title:hover {
+  opacity: 1 !important;
+  color: var(--md-sys-color-primary) !important;
+}
+
+/* Dual Action Suggestion Pills (Title vs Tag) */
+.dual-suggestion-chips-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.suggestion-pill {
+  display: inline-flex;
+  align-items: stretch;
+  background-color: var(--md-sys-color-surface-container-high);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--shape-corner-full);
+  overflow: hidden;
+  transition: all var(--motion-duration-short) ease;
+}
+
+.suggestion-pill:hover {
+  border-color: var(--md-sys-color-primary);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
+}
+
+.pill-title-action {
+  background: transparent;
+  border: none;
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--font-family-brand);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 5px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.pill-title-action:hover {
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.pill-tag-action {
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-outline);
+  padding: 5px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pill-tag-action:hover {
+  background-color: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
 }
 
 .inline-add-tag-form .m3-text-field:focus {
