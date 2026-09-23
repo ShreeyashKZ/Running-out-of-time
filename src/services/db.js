@@ -1,7 +1,7 @@
 // Offline IndexedDB Storage Service for "Running out of time"
 
 const DB_NAME = 'RunningOutOfTime_DB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbInstance = null;
 
@@ -27,6 +27,13 @@ export async function openDB() {
         const tagStore = db.createObjectStore('tags', { keyPath: 'name' });
         tagStore.createIndex('lastUsed', 'lastUsed', { unique: false });
         tagStore.createIndex('useCount', 'useCount', { unique: false });
+      }
+
+      // Todos store: simple checkmark task list
+      if (!db.objectStoreNames.contains('todos')) {
+        const todoStore = db.createObjectStore('todos', { keyPath: 'id' });
+        todoStore.createIndex('createdAt', 'createdAt', { unique: false });
+        todoStore.createIndex('completed', 'completed', { unique: false });
       }
 
       // App metadata store (active session, preferences)
@@ -183,18 +190,225 @@ export function saveActiveTimerState(state) {
   }
 }
 
-// ==================== DATA EXPORT & IMPORT ====================
+// ==================== TO-DOS SYSTEM ====================
+
+export async function getAllTodos() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    try {
+      const transaction = db.transaction('todos', 'readonly');
+      const store = transaction.objectStore('todos');
+      const request = store.getAll();
+
+      request.onsuccess = () => {
+        // Sort active first, then newest
+        const todos = (request.result || []).sort((a, b) => {
+          if (a.completed !== b.completed) return a.completed ? 1 : -1;
+          return b.createdAt - a.createdAt;
+        });
+        // Mirror to localStorage for external consumption
+        try {
+          localStorage.setItem('root_todos_v1', JSON.stringify(todos));
+        } catch (_) {}
+        resolve(todos);
+      };
+      request.onerror = () => reject(request.error);
+    } catch (e) {
+      // Fallback to localStorage if store upgrade is pending
+      const cached = localStorage.getItem('root_todos_v1');
+      resolve(cached ? JSON.parse(cached) : []);
+    }
+  });
+}
+
+export async function addTodo(text, linkedTag = null) {
+  if (!text || !text.trim()) return null;
+  const db = await openDB();
+
+  const todoItem = {
+    id: 'todo_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+    text: text.trim(),
+    completed: false,
+    createdAt: Date.now(),
+    completedAt: null,
+    linkedTag: linkedTag || null
+  };
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction('todos', 'readwrite');
+    const store = transaction.objectStore('todos');
+    store.put(todoItem);
+
+    transaction.oncomplete = () => {
+      getAllTodos(); // updates localStorage cache
+      resolve(todoItem);
+    };
+    transaction.onerror = () => reject(transaction.error);
+  });
+}
+
+export async function toggleTodo(id) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction('todos', 'readwrite');
+    const store = transaction.objectStore('todos');
+    const getReq = store.get(id);
+
+    getReq.onsuccess = () => {
+      const item = getReq.result;
+      if (!item) return resolve(null);
+      item.completed = !item.completed;
+      item.completedAt = item.completed ? Date.now() : null;
+      store.put(item);
+    };
+
+    transaction.oncomplete = () => {
+      getAllTodos();
+      resolve(true);
+    };
+    transaction.onerror = () => reject(transaction.error);
+  });
+}
+
+export async function deleteTodo(id) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction('todos', 'readwrite');
+    const store = transaction.objectStore('todos');
+    store.delete(id);
+
+    transaction.oncomplete = () => {
+      getAllTodos();
+      resolve(true);
+    };
+    transaction.onerror = () => reject(transaction.error);
+  });
+}
+
+export async function clearCompletedTodos() {
+  const db = await openDB();
+  const todos = await getAllTodos();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction('todos', 'readwrite');
+    const store = transaction.objectStore('todos');
+
+    todos.filter(t => t.completed).forEach(t => {
+      store.delete(t.id);
+    });
+
+    transaction.oncomplete = () => {
+      getAllTodos();
+      resolve(true);
+    };
+    transaction.onerror = () => reject(transaction.error);
+  });
+}
+
+// ==================== INTEROPERABLE DATA EXPORT & SHARE ====================
 
 export async function exportAllData() {
   const sessions = await getAllSessions();
   const tags = await getAllTags();
+  const todos = await getAllTodos();
+
   return {
-    version: 1,
-    appName: 'Running out of time',
+    app: 'Root',
+    version: '2.0',
     exportedAt: new Date().toISOString(),
-    sessions,
+    summary: {
+      totalSessions: sessions.length,
+      totalTags: tags.length,
+      totalTodos: todos.length,
+      totalDurationMs: sessions.reduce((acc, s) => acc + (s.durationMs || 0), 0)
+    },
+    sessions: sessions.map(s => ({
+      id: s.id,
+      title: s.title || '',
+      tags: Array.isArray(s.tags) ? s.tags : [],
+      date: s.dateStr || new Date(s.startTime).toISOString().split('T')[0],
+      startTime: s.startTime,
+      startTimeISO: new Date(s.startTime).toISOString(),
+      endTime: s.endTime,
+      endTimeISO: s.endTime ? new Date(s.endTime).toISOString() : null,
+      durationMs: s.durationMs || 0,
+      durationMinutes: Math.round(((s.durationMs || 0) / 60000) * 10) / 10,
+      notes: s.notes || ''
+    })),
+    todos,
     tags
   };
+}
+
+export async function exportSessionsCSV() {
+  const sessions = await getAllSessions();
+
+  const headers = [
+    'ID',
+    'Title',
+    'Tags',
+    'Date',
+    'Start Time (ISO)',
+    'End Time (ISO)',
+    'Duration (Seconds)',
+    'Duration (Minutes)',
+    'Notes'
+  ];
+
+  const escapeCSV = (val) => {
+    const str = String(val == null ? '' : val);
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return '"' + str.replace(/"/g, '""') + '"';
+    }
+    return str;
+  };
+
+  const rows = sessions.map(s => [
+    escapeCSV(s.id),
+    escapeCSV(s.title),
+    escapeCSV(Array.isArray(s.tags) ? s.tags.join('; ') : ''),
+    escapeCSV(s.dateStr || new Date(s.startTime).toISOString().split('T')[0]),
+    escapeCSV(new Date(s.startTime).toISOString()),
+    escapeCSV(s.endTime ? new Date(s.endTime).toISOString() : ''),
+    escapeCSV(Math.round((s.durationMs || 0) / 1000)),
+    escapeCSV(Math.round(((s.durationMs || 0) / 60000) * 10) / 10),
+    escapeCSV(s.notes || '')
+  ].join(','));
+
+  return [headers.join(','), ...rows].join('\r\n');
+}
+
+export async function shareOrDownloadData(format = 'json') {
+  const isCSV = format === 'csv';
+  const content = isCSV ? await exportSessionsCSV() : JSON.stringify(await exportAllData(), null, 2);
+  const mimeType = isCSV ? 'text/csv' : 'application/json';
+  const fileName = `Root-export-${new Date().toISOString().split('T')[0]}.${isCSV ? 'csv' : 'json'}`;
+
+  // Try Native Web Share API (Android native share sheet to Google Drive, WhatsApp, Files, Gmail, etc.)
+  if (navigator.canShare && navigator.canShare({ files: [new File([content], fileName, { type: mimeType })] })) {
+    try {
+      const file = new File([content], fileName, { type: mimeType });
+      await navigator.share({
+        title: 'Root Data Export',
+        text: `Exported Root data (${fileName})`,
+        files: [file]
+      });
+      return { shared: true };
+    } catch (err) {
+      if (err.name === 'AbortError') return { cancelled: true };
+    }
+  }
+
+  // Standard File Download Fallback
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  return { downloaded: true, fileName };
 }
 
 export async function importData(jsonData) {
@@ -204,9 +418,10 @@ export async function importData(jsonData) {
 
   const db = await openDB();
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction(['sessions', 'tags'], 'readwrite');
+    const transaction = db.transaction(['sessions', 'tags', 'todos'], 'readwrite');
     const sessionStore = transaction.objectStore('sessions');
     const tagStore = transaction.objectStore('tags');
+    const todoStore = transaction.objectStore('todos');
 
     jsonData.sessions.forEach(sess => {
       sessionStore.put(sess);
@@ -218,7 +433,16 @@ export async function importData(jsonData) {
       });
     }
 
-    transaction.oncomplete = () => resolve(true);
+    if (Array.isArray(jsonData.todos)) {
+      jsonData.todos.forEach(todo => {
+        todoStore.put(todo);
+      });
+    }
+
+    transaction.oncomplete = () => {
+      getAllTodos();
+      resolve(true);
+    };
     transaction.onerror = () => reject(transaction.error);
   });
 }
@@ -226,10 +450,12 @@ export async function importData(jsonData) {
 export async function clearAllData() {
   const db = await openDB();
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction(['sessions', 'tags'], 'readwrite');
+    const transaction = db.transaction(['sessions', 'tags', 'todos'], 'readwrite');
     transaction.objectStore('sessions').clear();
     transaction.objectStore('tags').clear();
+    transaction.objectStore('todos').clear();
     localStorage.removeItem('rott_active_timer');
+    localStorage.removeItem('root_todos_v1');
     transaction.oncomplete = () => resolve(true);
     transaction.onerror = () => reject(transaction.error);
   });
@@ -275,4 +501,9 @@ export async function populateSampleData() {
       });
     }
   }
+
+  // Also add sample todos
+  await addTodo('Complete math problem set');
+  await addTodo('Review biology flashcards');
+  await addTodo('Submit coding assignment');
 }

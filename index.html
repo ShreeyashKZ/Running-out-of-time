@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="description" content="Running out of time - Material 3 Offline Time-Tracking & Analytics" />
+  <meta name="description" content="Root - Material 3 Offline Time-Tracking & Analytics" />
   <meta name="theme-color" content="#121316" />
-  <title>Running out of time</title>
+  <title>Root - Running out of time</title>
 
   <!-- Google Fonts: Roboto Flex & Material Symbols Rounded -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -26,11 +26,11 @@
     <header class="m3-top-app-bar">
       <div class="top-bar-start">
         <div class="app-brand">
-          <div class="app-logo-badge">
+          <div class="app-logo-badge" title="Root (Running Out Of Time)">
             <img src="/icon.png" alt="Rabbit" class="app-logo-img" />
           </div>
           <div class="brand-text">
-            <h1 class="brand-title">Running out of time</h1>
+            <h1 class="brand-title">Root</h1>
             <div class="brand-status" id="headerStatus">
               <span class="status-dot"></span>
               <span class="status-label" id="headerStatusLabel">Idle</span>
@@ -52,10 +52,14 @@
       </div>
 
       <div class="top-bar-end">
-        <button class="m3-icon-button" id="btnManualEntry" title="Log Past Activity">
+        <button class="m3-icon-button" id="btnTodoList" title="To-Do Tasks" aria-label="To-Do List">
+          <span class="material-symbols-rounded">checklist</span>
+          <span class="todo-badge-dot" id="todoBadgeDot" style="display: none;"></span>
+        </button>
+        <button class="m3-icon-button" id="btnManualEntry" title="Claim Elapsed Time / Log Past Activity">
           <span class="material-symbols-rounded">more_time</span>
         </button>
-        <button class="m3-icon-button" id="btnDataManagement" title="Data Backup & Demo Data">
+        <button class="m3-icon-button" id="btnDataManagement" title="Data Backup & Share">
           <span class="material-symbols-rounded">database</span>
         </button>
         <button class="m3-icon-button" id="btnThemeToggle" title="Toggle Theme">

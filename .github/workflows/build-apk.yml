@@ -49,29 +49,37 @@ jobs:
       - name: Rename and Prepare APK
         run: |
           mkdir -p output
+          cp android/app/build/outputs/apk/debug/app-debug.apk output/Root.apk
           cp android/app/build/outputs/apk/debug/app-debug.apk output/Running-out-of-time.apk
 
       - name: Upload APK as Workflow Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Running-out-of-time-apk
-          path: output/Running-out-of-time.apk
+          name: Root-apk
+          path: output/*.apk
 
       - name: Create or Update GitHub Release with APK
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.0.0
-          name: "Running out of time v1.0.0 (Android APK)"
+          tag_name: v1.1.0
+          name: "Root v1.1.0 (Android APK)"
           body: |
-            ## ⏳ Running out of time - Android 9+ APK
-            Download the attached `Running-out-of-time.apk` directly onto your Android phone and install it!
+            ## ⏳ Root - Material 3 Android App (v1.1.0)
+            **Root** (short for *Running Out Of Time*) is an offline-first time-tracking and productivity intelligence application for Android 9.0+ and Web.
             
-            ### 📱 Installation Instructions:
-            1. Download `Running-out-of-time.apk` on your phone.
-            2. Tap the downloaded file in your browser downloads or Files app.
-            3. If prompted, allow "Install unknown apps" for your browser/file manager.
-            4. Tap **Install** and enjoy!
-          files: output/Running-out-of-time.apk
+            ### ✨ What's New in v1.1.0:
+            - **Short App Name "Root"**: Clean launcher icon label and UI.
+            - **White Rabbit Icon**: Proper adaptive icon configuration for Android 9+ launchers.
+            - **Vertical Phone Screen Optimization**: Responsive layout, fluid typography, no text cutoff or overflow on mobile devices.
+            - **Daily Screen-Time Breakdown**: Android Digital Wellbeing / iOS Screen Time style daily usage visualization with color-coded segmented bars.
+            - **Corner Tasks & To-Do List**: Quick task list with checkmarks and one-tap tracking.
+            - **Interoperable Data Storage**: Open JSON & RFC 4180 CSV export with native Android sharing.
+            
+            ### 📱 Installation:
+            Download `Root.apk` directly on your Android phone and install!
+          files: |
+            output/Root.apk
+            output/Running-out-of-time.apk
           draft: false
           prerelease: false

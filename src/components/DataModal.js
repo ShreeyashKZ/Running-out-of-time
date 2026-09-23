@@ -1,5 +1,5 @@
-// Data Management & Backup Modal for "Running out of time"
-import { exportAllData, importData, populateSampleData, clearAllData, getAllSessions } from '../services/db.js';
+// Data Management & Interoperability Modal for "Root"
+import { exportAllData, exportSessionsCSV, shareOrDownloadData, importData, populateSampleData, clearAllData } from '../services/db.js';
 
 export class DataModal {
   constructor(modalContainer, onDataChanged) {
@@ -20,41 +20,46 @@ export class DataModal {
     this.modalContainer.innerHTML = `
       <div class="m3-dialog">
         <div class="dialog-header">
-          <h3 class="dialog-title">Data & Backup</h3>
-          <button class="m3-icon-button" id="btnDataClose">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="material-symbols-rounded" style="color: var(--md-sys-color-primary);">database</span>
+            <h3 class="dialog-title" style="margin: 0;">Data & Interoperability</h3>
+          </div>
+          <button class="m3-icon-button" id="btnDataClose" title="Close" aria-label="Close dialog">
             <span class="material-symbols-rounded">close</span>
           </button>
         </div>
 
-        <p style="font-size: 0.9rem; color: var(--md-sys-color-outline); margin-bottom: 20px;">
-          All your time data is stored strictly in your browser and device. You can export, restore, or generate sample stats.
+        <p style="font-size: 0.88rem; color: var(--md-sys-color-outline); margin-bottom: 18px; line-height: 1.4;">
+          Your data is stored 100% locally on your device in standard open formats. You can share or export it for use in other apps, spreadsheets, or data tools.
         </p>
 
-        <div style="display: flex; flex-direction: column; gap: 12px;">
-          <!-- Export JSON -->
-          <button class="m3-button tonal" id="btnExportJSON" style="justify-content: flex-start; height: 50px;">
-            <span class="material-symbols-rounded">file_download</span>
-            <div style="text-align: left; margin-left: 6px;">
-              <div style="font-weight: 700;">Export JSON Backup</div>
-              <div style="font-size: 0.75rem; color: var(--md-sys-color-outline);">Full backup including tags and sessions</div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <!-- Share / Export JSON -->
+          <button class="m3-button tonal" id="btnExportJSON" style="justify-content: flex-start; height: 50px; text-align: left; padding: 0 16px;">
+            <span class="material-symbols-rounded" style="font-size: 22px;">code</span>
+            <div style="margin-left: 10px; flex: 1;">
+              <div style="font-weight: 700; font-size: 0.9rem;">Export / Share JSON</div>
+              <div style="font-size: 0.75rem; color: var(--md-sys-color-outline);">Standard JSON schema (Sessions, Todos, Tags)</div>
             </div>
+            <span class="material-symbols-rounded" style="font-size: 18px; opacity: 0.6;">share</span>
           </button>
 
-          <!-- Export CSV -->
-          <button class="m3-button tonal" id="btnExportCSV" style="justify-content: flex-start; height: 50px;">
-            <span class="material-symbols-rounded">table_chart</span>
-            <div style="text-align: left; margin-left: 6px;">
-              <div style="font-weight: 700;">Export CSV for Excel / Sheets</div>
-              <div style="font-size: 0.75rem; color: var(--md-sys-color-outline);">Spreadsheet format with dates and durations</div>
+          <!-- Share / Export CSV -->
+          <button class="m3-button tonal" id="btnExportCSV" style="justify-content: flex-start; height: 50px; text-align: left; padding: 0 16px;">
+            <span class="material-symbols-rounded" style="font-size: 22px;">table_chart</span>
+            <div style="margin-left: 10px; flex: 1;">
+              <div style="font-weight: 700; font-size: 0.9rem;">Export / Share CSV (Excel / Sheets)</div>
+              <div style="font-size: 0.75rem; color: var(--md-sys-color-outline);">Universal RFC 4180 spreadsheet format</div>
             </div>
+            <span class="material-symbols-rounded" style="font-size: 18px; opacity: 0.6;">share</span>
           </button>
 
-          <!-- Import JSON -->
-          <label class="m3-button tonal" style="justify-content: flex-start; height: 50px; cursor: pointer;">
-            <span class="material-symbols-rounded">file_upload</span>
-            <div style="text-align: left; margin-left: 6px;">
-              <div style="font-weight: 700;">Import Backup</div>
-              <div style="font-size: 0.75rem; color: var(--md-sys-color-outline);">Restore from previous JSON file</div>
+          <!-- Import Backup -->
+          <label class="m3-button tonal" style="justify-content: flex-start; height: 50px; text-align: left; padding: 0 16px; cursor: pointer;">
+            <span class="material-symbols-rounded" style="font-size: 22px;">file_upload</span>
+            <div style="margin-left: 10px; flex: 1;">
+              <div style="font-weight: 700; font-size: 0.9rem;">Import Backup File</div>
+              <div style="font-size: 0.75rem; color: var(--md-sys-color-outline);">Restore data from standard JSON backup</div>
             </div>
             <input type="file" id="importFileInput" accept=".json" style="display: none;" />
           </label>
@@ -62,20 +67,20 @@ export class DataModal {
           <hr style="border: 0; border-top: 1px solid var(--md-sys-color-outline-variant); margin: 6px 0;" />
 
           <!-- Populate Demo Data -->
-          <button class="m3-button outlined" id="btnLoadSampleData" style="justify-content: flex-start; height: 48px;">
-            <span class="material-symbols-rounded">auto_awesome</span>
-            <div style="text-align: left; margin-left: 6px;">
-              <div style="font-weight: 700;">Load Realistic Sample Data</div>
-              <div style="font-size: 0.75rem; color: var(--md-sys-color-outline);">Populate 2 weeks of sample stats & leaderboard</div>
+          <button class="m3-button outlined" id="btnLoadSampleData" style="justify-content: flex-start; height: 46px; text-align: left; padding: 0 16px;">
+            <span class="material-symbols-rounded" style="font-size: 20px;">dataset</span>
+            <div style="margin-left: 10px; flex: 1;">
+              <div style="font-weight: 700; font-size: 0.88rem;">Load Sample Dataset</div>
+              <div style="font-size: 0.72rem; color: var(--md-sys-color-outline);">Populate 14 days of realistic logs & leaderboards</div>
             </div>
           </button>
 
           <!-- Clear All Data -->
-          <button class="m3-button error" id="btnClearData" style="justify-content: flex-start; height: 48px; margin-top: 4px;">
-            <span class="material-symbols-rounded">delete_forever</span>
-            <div style="text-align: left; margin-left: 6px;">
-              <div style="font-weight: 700;">Clear All Data</div>
-              <div style="font-size: 0.75rem; opacity: 0.85;">Erase all logged sessions and start fresh</div>
+          <button class="m3-button error" id="btnClearData" style="justify-content: flex-start; height: 46px; text-align: left; padding: 0 16px; margin-top: 2px;">
+            <span class="material-symbols-rounded" style="font-size: 20px;">delete_forever</span>
+            <div style="margin-left: 10px; flex: 1;">
+              <div style="font-weight: 700; font-size: 0.88rem;">Erase All Data</div>
+              <div style="font-size: 0.72rem; opacity: 0.9;">Permanently delete all sessions, todos & tags</div>
             </div>
           </button>
         </div>
@@ -91,73 +96,60 @@ export class DataModal {
     const btnSample = this.modalContainer.querySelector('#btnLoadSampleData');
     const btnClear = this.modalContainer.querySelector('#btnClearData');
 
-    btnClose.addEventListener('click', () => this.close());
+    if (btnClose) btnClose.addEventListener('click', () => this.close());
 
-    // Export JSON
-    btnExportJSON.addEventListener('click', async () => {
-      const data = await exportAllData();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      downloadFile(blob, `running_out_of_time_backup_${new Date().toISOString().split('T')[0]}.json`);
-    });
+    // Export / Share JSON
+    if (btnExportJSON) {
+      btnExportJSON.addEventListener('click', async () => {
+        await shareOrDownloadData('json');
+      });
+    }
 
-    // Export CSV
-    btnExportCSV.addEventListener('click', async () => {
-      const sessions = await getAllSessions();
-      let csv = 'ID,Date,Activity,StartTime,EndTime,DurationMinutes,DurationFormatted,Tags,Notes\n';
-      for (const s of sessions) {
-        const startStr = new Date(s.startTime).toLocaleTimeString();
-        const endStr = new Date(s.endTime).toLocaleTimeString();
-        const mins = Math.round((s.durationMs / 60000) * 10) / 10;
-        const tags = (s.tags || []).join(';');
-        csv += `"${s.id}","${s.dateStr}","${s.title}","${startStr}","${endStr}",${mins},"${s.durationMs}ms","${tags}","${s.notes || ''}"\n`;
-      }
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      downloadFile(blob, `running_out_of_time_data_${new Date().toISOString().split('T')[0]}.csv`);
-    });
+    // Export / Share CSV
+    if (btnExportCSV) {
+      btnExportCSV.addEventListener('click', async () => {
+        await shareOrDownloadData('csv');
+      });
+    }
 
     // Import JSON
-    fileInput.addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      try {
-        const text = await file.text();
-        const json = JSON.parse(text);
-        await importData(json);
-        alert('Data imported successfully!');
-        this.close();
-        if (this.onDataChanged) this.onDataChanged();
-      } catch (err) {
-        alert('Failed to import file: ' + err.message);
-      }
-    });
+    if (fileInput) {
+      fileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+          const text = await file.text();
+          const json = JSON.parse(text);
+          await importData(json);
+          alert('Data imported successfully!');
+          this.close();
+          if (this.onDataChanged) this.onDataChanged();
+        } catch (err) {
+          alert('Failed to import file: ' + err.message);
+        }
+      });
+    }
 
     // Load Sample Data
-    btnSample.addEventListener('click', async () => {
-      if (confirm('Load sample activities for the past 14 days? This lets you test the weekly/monthly/custom leaderboard and charts.')) {
-        await populateSampleData();
-        this.close();
-        if (this.onDataChanged) this.onDataChanged();
-      }
-    });
+    if (btnSample) {
+      btnSample.addEventListener('click', async () => {
+        if (confirm('Load sample activities for the past 14 days? This populates stats, charts, and leaderboards.')) {
+          await populateSampleData();
+          this.close();
+          if (this.onDataChanged) this.onDataChanged();
+        }
+      });
+    }
 
     // Clear All
-    btnClear.addEventListener('click', async () => {
-      if (confirm('Are you sure you want to permanently delete ALL sessions and tags? This cannot be undone.')) {
-        await clearAllData();
-        this.close();
-        if (this.onDataChanged) this.onDataChanged();
-      }
-    });
+    if (btnClear) {
+      btnClear.addEventListener('click', async () => {
+        if (confirm('Permanently delete all logged sessions, todos, and tags? This cannot be undone.')) {
+          await clearAllData();
+          this.close();
+          if (this.onDataChanged) this.onDataChanged();
+        }
+      });
+    }
   }
-}
-
-function downloadFile(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
 }

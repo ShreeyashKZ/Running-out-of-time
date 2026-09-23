@@ -1,6 +1,6 @@
 {
   "appId": "com.runningoutoftime.app",
-  "appName": "Running out of time",
+  "appName": "Root",
   "webDir": "dist",
   "bundledWebRuntime": false,
   "android": {

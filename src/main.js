@@ -1,4 +1,4 @@
-// Main Application Coordinator for "Running out of time"
+// Main Application Coordinator for "Root"
 import { timerService, formatTickerTime, formatHumanDuration } from './services/timer.js';
 import { ActiveTracker } from './components/ActiveTracker.js';
 import { LeaderboardView } from './components/LeaderboardView.js';
@@ -6,6 +6,8 @@ import { StatsView } from './components/StatsView.js';
 import { HistoryView } from './components/HistoryView.js';
 import { ManualEntryModal } from './components/ManualEntryModal.js';
 import { DataModal } from './components/DataModal.js';
+import { TodoListModal } from './components/TodoListModal.js';
+import { getAllTodos } from './services/db.js';
 
 class App {
   constructor() {
@@ -116,6 +118,12 @@ class App {
 
   // ==================== HEADER ACTIONS ====================
   bindHeaderActions() {
+    const btnTodo = document.getElementById('btnTodoList');
+    if (btnTodo) {
+      btnTodo.addEventListener('click', () => this.openTodoList());
+    }
+    this.updateTodoBadge();
+
     const btnManual = document.getElementById('btnManualEntry');
     if (btnManual) {
       btnManual.addEventListener('click', () => this.openManualEntry());
@@ -126,6 +134,7 @@ class App {
       btnData.addEventListener('click', () => {
         new DataModal(this.modalContainer, () => {
           this.navigateTo(this.currentTab);
+          this.updateTodoBadge();
         });
       });
     }
@@ -150,6 +159,33 @@ class App {
     }
   }
 
+  async updateTodoBadge() {
+    const dot = document.getElementById('todoBadgeDot');
+    if (!dot) return;
+    try {
+      const todos = await getAllTodos();
+      const activeCount = todos.filter(t => !t.completed).length;
+      dot.style.display = activeCount > 0 ? 'block' : 'none';
+    } catch (_) {}
+  }
+
+  openTodoList() {
+    new TodoListModal(this.modalContainer, {
+      onClose: () => {
+        this.updateTodoBadge();
+      },
+      onTrackTask: (taskText) => {
+        this.navigateTo('tracker');
+        if (this.activeViewController && typeof this.activeViewController.setSessionTitle === 'function') {
+          this.activeViewController.setSessionTitle(taskText);
+        }
+        this.showSnackbar(`Ready to track "${taskText}"`);
+        this.updateTodoBadge();
+      }
+    });
+    this.modalContainer.style.display = 'flex';
+  }
+
   openManualEntry(options = {}) {
     new ManualEntryModal(this.modalContainer, (session) => {
       const actionName = options.isClaimMode ? 'Claimed' : 'Saved';
@@ -168,10 +204,10 @@ class App {
 
     timerService.onTick((tickData) => {
       if (tickData.isTracking && tickData.activeSession) {
-        document.title = `⏳ ${tickData.activeElapsedFormatted} - ${tickData.activeSession.title} | Running out of time`;
+        document.title = `⏳ ${tickData.activeElapsedFormatted} - ${tickData.activeSession.title} | Root`;
         if (quickTimerElapsed) quickTimerElapsed.textContent = tickData.activeElapsedFormatted;
       } else {
-        document.title = `${tickData.localTimeFormatted} • Running out of time`;
+        document.title = `${tickData.localTimeFormatted} • Root`;
       }
     });
 
@@ -186,7 +222,7 @@ class App {
         document.documentElement.setAttribute('data-session-state', 'idle');
         headerStatus.classList.remove('active');
         headerStatusLabel.textContent = 'Idle';
-        document.title = 'Running out of time';
+        document.title = 'Root';
         if (quickBar) quickBar.style.display = 'none';
       }
     });

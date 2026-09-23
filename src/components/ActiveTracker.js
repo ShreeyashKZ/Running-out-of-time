@@ -1,7 +1,8 @@
-// Active Tracker & Local Device Timepiece for "Running out of time"
+// Active Tracker & Local Device Timepiece for "Root"
 import { timerService, formatTickerTime, formatTimeOfDay, formatHumanDuration } from '../services/timer.js';
 import { getAllTags } from '../services/db.js';
 import { timeSync } from '../services/timeSync.js';
+import { DailyBreakdownView } from './DailyBreakdownView.js';
 
 export class ActiveTracker {
   constructor(container, onSessionCompleted, onOpenClaimModal) {
@@ -261,25 +262,14 @@ export class ActiveTracker {
 
               <button class="m3-button tonal" id="btnClaimElapsed">
                 <span class="material-symbols-rounded">more_time</span>
-                Claim Elapsed Time / Log Past Activity
+                Claim Elapsed Time
               </button>
             `}
           </div>
         </div>
 
-        <!-- Offline & Calm Experience Details Card -->
-        <div class="precision-card">
-          <div class="precision-icon">
-            <span class="material-symbols-rounded">spa</span>
-          </div>
-          <div class="precision-content">
-            <h4>Calm Ambient Flow • Flexible Title & Tags</h4>
-            <p>
-              The app dynamically transitions to serene, calm light color shades whenever a session is started or closed. 
-              Assign a dedicated title, attach multiple tags, or promote any tag into your title with one click.
-            </p>
-          </div>
-        </div>
+        <!-- Phone Screen-Time Style Daily Breakdown -->
+        <div id="trackerDailyBreakdownContainer" style="margin-top: 18px;"></div>
       </section>
     `;
   }
@@ -516,6 +506,27 @@ export class ActiveTracker {
         });
       }
     }
+
+    // Mount Phone Screen-Time Style Daily Breakdown
+    const breakdownEl = this.container.querySelector('#trackerDailyBreakdownContainer');
+    if (breakdownEl) {
+      this.dailyBreakdownInstance = new DailyBreakdownView(breakdownEl, {
+        onSelectActivity: (act) => {
+          this.setSessionTitle(act);
+        }
+      });
+    }
+  }
+
+  setSessionTitle(title, tag = null) {
+    if (!title) return;
+    this.sessionTitle = title;
+    if (tag) this.selectedTags.add(tag);
+    if (timerService.isActive()) {
+      timerService.setSessionTitle(title);
+    }
+    this.render();
+    this.bindEvents();
   }
 
   handleStart() {

@@ -1,25 +1,56 @@
-# ⏳ Running out of time
+# ⏳ Root (Running Out Of Time)
 
-> A modern, offline-first Material 3 time-tracking and productivity intelligence application built for **Web & Android 9.0+ (API 28+)**.
+> A fast, modern, offline-first Material 3 time-tracking and productivity intelligence application built for **Android 9.0+ (API 28+) & Web**.
 
-[![Download APK](https://img.shields.io/badge/Download-Android%20APK%20(Android%209%2B)-brightgreen?style=for-the-badge&logo=android)](https://github.com/ShreeyashKZ/Running-out-of-time/releases/download/v1.0.0/Running-out-of-time.apk)
-[![Release v1.0.0](https://img.shields.io/github/v/release/ShreeyashKZ/Running-out-of-time?style=for-the-badge)](https://github.com/ShreeyashKZ/Running-out-of-time/releases/tag/v1.0.0)
+[![Download Root APK](https://img.shields.io/badge/Download-Root%20APK%20(Android%209%2B)-brightgreen?style=for-the-badge&logo=android)](https://github.com/ShreeyashKZ/Running-out-of-time/releases/download/v1.1.0/Root.apk)
+[![Release v1.1.0](https://img.shields.io/github/v/release/ShreeyashKZ/Running-out-of-time?style=for-the-badge)](https://github.com/ShreeyashKZ/Running-out-of-time/releases/tag/v1.1.0)
 
 ---
 
 ## 📲 Direct APK Installation (On Your Phone)
 
-To install **Running out of time** directly on your Android phone (Android 9.0+):
+To install **Root** directly on your Android phone (Android 9.0+):
 
-1. **[Click here to download `Running-out-of-time.apk`](https://github.com/ShreeyashKZ/Running-out-of-time/releases/download/v1.0.0/Running-out-of-time.apk)** (or go to the [v1.0.0 Release page](https://github.com/ShreeyashKZ/Running-out-of-time/releases/tag/v1.0.0)).
+1. **[Click here to download `Root.apk`](https://github.com/ShreeyashKZ/Running-out-of-time/releases/download/v1.1.0/Root.apk)** (or go to the [v1.1.0 Release page](https://github.com/ShreeyashKZ/Running-out-of-time/releases/tag/v1.1.0)).
 2. Tap the downloaded file in your browser notifications or Files app.
 3. If prompted by Android, enable **"Allow from this source"** for your browser / file manager.
 4. Tap **Install** and you're all set!
 
+---
 
 ## 🌟 Key Features
 
-### 1. ⏱️ Time Running All the Time (Background Resilient)
+### 1. 📱 Vertical Phone Screen Optimized
+- Responsive, fluid typography (`clamp`) ensuring digital timers and readouts never overflow or clip on narrow vertical phone screens.
+- Thumb-reachable full-width touch actions for comfortable one-handed use on Android.
+- Compact Top Bar with White Rabbit icon, short "Root" branding, and quick action buttons.
+
+### 2. 📊 Daily Screen-Time Style Activity Breakdown
+- Visual daily breakdown modeled after phone Screen Time / Digital Wellbeing.
+- Daily hero readout showing total active time and percentage of the 24-hour day.
+- Segmented, multi-colored usage bar illustrating proportional time spent across activities.
+- Ranked list of activities with individual progress bars, exact duration, and percentage share.
+- Date navigation (`< Today >`) to inspect any day's history.
+
+### 3. ✅ Corner Tasks & To-Do List
+- Corner icon button (`checklist`) with live pending task badge indicator.
+- Fast checklist: type a task and press enter.
+- Strikethrough checkmark toggle.
+- One-tap **"Track"** button next to each task to immediately set it as the active session title in Root!
+
+### 4. 🐰 White Rabbit Launcher & Adaptive Icon
+- Native Android adaptive icon (`ic_launcher.xml` + high-density mipmap foregrounds) ensuring Android 9+ launchers always show the White Rabbit icon.
+
+### 5. 🔓 Open, Interoperable Data Storage
+- 100% offline data stored locally in standard open schemas.
+- Universal JSON export and RFC 4180 CSV export for use in Excel, Google Sheets, Python, Pandas, or external time-tracking tools.
+- Native Android Web Share API support to send data directly to Google Drive, WhatsApp, Files, Gmail, etc.
+
+### 6. ⏱️ Drift-Free Device-Synced Clock
+- Continuous master clock synchronized to device local time.
+- Day depletion gauge showing how much of today remains.
+- Multi-tag tagging system with flexible tag-as-title promotion.
+- Weekly, Monthly, and All-Time leaderboards.
 - **Continuous Real-Time Display**: Live HH:MM:SS ticker with millisecond precision.
 - **Drift-Free Background Tracking**: Uses system timestamps (`Date.now() - startTime`). Whether you switch apps, close the tab, or your Android device enters Doze mode, returning hours later accurately records the exact elapsed duration.
 - **Human-Readable Formats**: Automatically calculates and displays natural duration summaries such as `"3 hours 5 minutes"`.
