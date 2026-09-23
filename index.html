@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="Running out of time - Material 3 Offline Time-Tracking & Analytics" />
+  <meta name="theme-color" content="#121316" />
+  <title>Running out of time</title>
+
+  <!-- Google Fonts: Roboto Flex & Material Symbols Rounded -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+  <link rel="stylesheet" href="/src/styles/tokens.css" />
+  <link rel="stylesheet" href="/src/styles/components.css" />
+  <link rel="stylesheet" href="/src/styles/main.css" />
+</head>
+<body>
+  <div id="app" class="app-layout">
+    <!-- Top App Bar (M3 Standard / Center Aligned) -->
+    <header class="m3-top-app-bar">
+      <div class="top-bar-start">
+        <div class="app-brand">
+          <div class="app-logo-badge">
+            <span class="material-symbols-rounded logo-icon">hourglass_empty</span>
+          </div>
+          <div class="brand-text">
+            <h1 class="brand-title">Running out of time</h1>
+            <div class="brand-status" id="headerStatus">
+              <span class="status-dot"></span>
+              <span class="status-label" id="headerStatusLabel">Idle</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Live Bar (Visible when timer is active and user is on another tab) -->
+      <div class="top-bar-center" id="quickActiveBar" style="display: none;">
+        <div class="quick-timer-chip" id="quickTimerChip">
+          <span class="pulse-indicator"></span>
+          <span class="quick-activity" id="quickActivityName">Attending class</span>
+          <span class="quick-elapsed" id="quickTimerElapsed">00:00:00</span>
+          <button class="m3-icon-button small-btn" id="btnQuickStop" title="Stop current session">
+            <span class="material-symbols-rounded">stop_circle</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="top-bar-end">
+        <button class="m3-icon-button" id="btnManualEntry" title="Log Past Activity">
+          <span class="material-symbols-rounded">more_time</span>
+        </button>
+        <button class="m3-icon-button" id="btnDataManagement" title="Data Backup & Demo Data">
+          <span class="material-symbols-rounded">database</span>
+        </button>
+        <button class="m3-icon-button" id="btnThemeToggle" title="Toggle Theme">
+          <span class="material-symbols-rounded" id="themeIcon">light_mode</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Navigation Bar / Rail (M3 Navigation) -->
+    <nav class="m3-navigation-bar" id="mainNav">
+      <button class="nav-destination active" data-tab="tracker" id="nav-tracker">
+        <div class="nav-indicator">
+          <span class="material-symbols-rounded nav-icon">timer</span>
+        </div>
+        <span class="nav-label">Tracker</span>
+      </button>
+
+      <button class="nav-destination" data-tab="leaderboard" id="nav-leaderboard">
+        <div class="nav-indicator">
+          <span class="material-symbols-rounded nav-icon">leaderboard</span>
+        </div>
+        <span class="nav-label">Leaderboard</span>
+      </button>
+
+      <button class="nav-destination" data-tab="analytics" id="nav-analytics">
+        <div class="nav-indicator">
+          <span class="material-symbols-rounded nav-icon">insights</span>
+        </div>
+        <span class="nav-label">Analytics</span>
+      </button>
+
+      <button class="nav-destination" data-tab="history" id="nav-history">
+        <div class="nav-indicator">
+          <span class="material-symbols-rounded nav-icon">history</span>
+        </div>
+        <span class="nav-label">History</span>
+      </button>
+    </nav>
+
+    <!-- Main Dynamic Content Area -->
+    <main class="main-content" id="mainContent">
+      <!-- Injected by View Controllers -->
+    </main>
+
+    <!-- Dialogs & Modals Container -->
+    <div id="modalContainer" class="modal-overlay" style="display: none;"></div>
+
+    <!-- M3 Floating Snackbar -->
+    <div id="snackbar" class="m3-snackbar" role="alert" aria-live="polite">
+      <span class="snackbar-text" id="snackbarText">Session saved</span>
+      <button class="snackbar-action" id="snackbarAction" style="display: none;"></button>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

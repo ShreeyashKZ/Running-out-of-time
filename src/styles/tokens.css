@@ -1,0 +1,134 @@
+:root {
+  /* Material 3 Typography Scale */
+  --font-family-brand: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family-plain: 'Roboto Flex', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+
+  /* Shape Tokens (M3 Standard Radii) */
+  --shape-corner-none: 0px;
+  --shape-corner-xs: 4px;
+  --shape-corner-sm: 8px;
+  --shape-corner-md: 12px;
+  --shape-corner-lg: 16px;
+  --shape-corner-xl: 28px;
+  --shape-corner-full: 9999px;
+
+  /* Motion Tokens (M3 Easing Curves) */
+  --motion-easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --motion-duration-short: 150ms;
+  --motion-duration-medium: 300ms;
+  --motion-duration-long: 500ms;
+}
+
+/* Material 3 Dark Theme (Default: Sleek, high-focus productivity) */
+[data-theme="dark"] {
+  --md-sys-color-primary: #d0bcff;
+  --md-sys-color-on-primary: #381e72;
+  --md-sys-color-primary-container: #4f378b;
+  --md-sys-color-on-primary-container: #eaddff;
+  --md-sys-color-primary-glow: rgba(208, 188, 255, 0.25);
+
+  --md-sys-color-secondary: #ccc2dc;
+  --md-sys-color-on-secondary: #332d41;
+  --md-sys-color-secondary-container: #4a4458;
+  --md-sys-color-on-secondary-container: #e8def8;
+
+  --md-sys-color-tertiary: #7bd0c1;
+  --md-sys-color-on-tertiary: #003730;
+  --md-sys-color-tertiary-container: #005047;
+  --md-sys-color-on-tertiary-container: #97ede0;
+
+  --md-sys-color-error: #ffb4ab;
+  --md-sys-color-on-error: #690005;
+  --md-sys-color-error-container: #93000a;
+  --md-sys-color-on-error-container: #ffdad6;
+
+  --md-sys-color-surface: #141218;
+  --md-sys-color-on-surface: #e6e0e9;
+  --md-sys-color-surface-variant: #49454f;
+  --md-sys-color-on-surface-variant: #cac4d0;
+  --md-sys-color-outline: #938f99;
+  --md-sys-color-outline-variant: #49454f;
+
+  /* Surface Container Levels (M3 Elevation without heavy shadows) */
+  --md-sys-color-surface-dim: #141218;
+  --md-sys-color-surface-bright: #3b383e;
+  --md-sys-color-surface-container-lowest: #0f0d13;
+  --md-sys-color-surface-container-low: #1d1b20;
+  --md-sys-color-surface-container: #211f26;
+  --md-sys-color-surface-container-high: #2b2930;
+  --md-sys-color-surface-container-highest: #36343b;
+
+  --md-sys-color-inverse-surface: #e6e0e9;
+  --md-sys-color-inverse-on-surface: #322f35;
+  --md-sys-color-inverse-primary: #6750a4;
+
+  /* Accent leaderboards & medals */
+  --badge-gold: #ffd54f;
+  --badge-gold-bg: rgba(255, 213, 79, 0.15);
+  --badge-silver: #cfd8dc;
+  --badge-silver-bg: rgba(207, 216, 220, 0.15);
+  --badge-bronze: #ffab91;
+  --badge-bronze-bg: rgba(255, 171, 145, 0.15);
+
+  --timer-pulse-color: #7bd0c1;
+  --timer-glow: 0 0 32px rgba(123, 208, 193, 0.25);
+  --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  --dialog-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+}
+
+/* Material 3 Light Theme */
+[data-theme="light"] {
+  --md-sys-color-primary: #6750a4;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #eaddff;
+  --md-sys-color-on-primary-container: #21005d;
+  --md-sys-color-primary-glow: rgba(103, 80, 164, 0.2);
+
+  --md-sys-color-secondary: #625b71;
+  --md-sys-color-on-secondary: #ffffff;
+  --md-sys-color-secondary-container: #e8def8;
+  --md-sys-color-on-secondary-container: #1d192b;
+
+  --md-sys-color-tertiary: #006a5e;
+  --md-sys-color-on-tertiary: #ffffff;
+  --md-sys-color-tertiary-container: #97ede0;
+  --md-sys-color-on-tertiary-container: #00201b;
+
+  --md-sys-color-error: #ba1a1a;
+  --md-sys-color-on-error: #ffffff;
+  --md-sys-color-error-container: #ffdad6;
+  --md-sys-color-on-error-container: #410002;
+
+  --md-sys-color-surface: #fef7ff;
+  --md-sys-color-on-surface: #1d1b20;
+  --md-sys-color-surface-variant: #e7e0ec;
+  --md-sys-color-on-surface-variant: #49454f;
+  --md-sys-color-outline: #79747e;
+  --md-sys-color-outline-variant: #cac4d0;
+
+  --md-sys-color-surface-dim: #ded8e1;
+  --md-sys-color-surface-bright: #fef7ff;
+  --md-sys-color-surface-container-lowest: #ffffff;
+  --md-sys-color-surface-container-low: #f7f2fa;
+  --md-sys-color-surface-container: #f3edf7;
+  --md-sys-color-surface-container-high: #ece6f0;
+  --md-sys-color-surface-container-highest: #e6e0e9;
+
+  --md-sys-color-inverse-surface: #322f35;
+  --md-sys-color-inverse-on-surface: #f5eff7;
+  --md-sys-color-inverse-primary: #d0bcff;
+
+  --badge-gold: #f57f17;
+  --badge-gold-bg: rgba(245, 127, 23, 0.12);
+  --badge-silver: #546e7a;
+  --badge-silver-bg: rgba(84, 110, 122, 0.12);
+  --badge-bronze: #d84315;
+  --badge-bronze-bg: rgba(216, 67, 21, 0.12);
+
+  --timer-pulse-color: #006a5e;
+  --timer-glow: 0 0 24px rgba(0, 106, 94, 0.2);
+  --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  --dialog-shadow: 0 12px 36px rgba(0, 0, 0, 0.18);
+}

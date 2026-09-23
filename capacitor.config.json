@@ -1,0 +1,12 @@
+{
+  "appId": "com.runningoutoftime.app",
+  "appName": "Running out of time",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "android": {
+    "minSdkVersion": 28,
+    "compileSdkVersion": 34,
+    "targetSdkVersion": 34,
+    "backgroundColor": "#141218"
+  }
+}
