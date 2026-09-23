@@ -1,16 +1,17 @@
-// Active Tracker Component for "Running out of time"
+// Active Tracker & Relentless Time Engine for "Running out of time"
 import { timerService, formatTickerTime, formatTimeOfDay, formatHumanDuration } from '../services/timer.js';
 import { getAllTags } from '../services/db.js';
+import { timeSync } from '../services/timeSync.js';
 
 export class ActiveTracker {
   constructor(container, onSessionCompleted) {
     this.container = container;
     this.onSessionCompleted = onSessionCompleted;
     this.tagsList = [];
-    this.selectedTags = new Set();
     this.activeSession = timerService.getActiveSession();
     this.unsubscribeTick = null;
     this.unsubscribeState = null;
+    this.unsubscribeSync = null;
 
     this.init();
   }
@@ -20,9 +21,9 @@ export class ActiveTracker {
     this.render();
     this.bindEvents();
 
-    // Subscribe to timer ticks and state changes
-    this.unsubscribeTick = timerService.onTick((elapsedMs, formatted) => {
-      this.updateTickerDisplay(formatted);
+    // Subscribe to the relentless master clock
+    this.unsubscribeTick = timerService.onTick((tickData) => {
+      this.updateTickingElements(tickData);
     });
 
     this.unsubscribeState = timerService.onStateChange((session) => {
@@ -30,51 +31,89 @@ export class ActiveTracker {
       this.render();
       this.bindEvents();
     });
+
+    this.unsubscribeSync = timeSync.onSyncChange(() => {
+      this.updateSyncBadge();
+    });
   }
 
   destroy() {
     if (this.unsubscribeTick) this.unsubscribeTick();
     if (this.unsubscribeState) this.unsubscribeState();
+    if (this.unsubscribeSync) this.unsubscribeSync();
   }
 
   render() {
-    const isActive = timerService.isActive();
+    const isTracking = timerService.isActive();
     const currentTitle = this.activeSession ? this.activeSession.title : '';
-    const initialTicker = formatTickerTime(timerService.getElapsedMs());
-    const startTimeText = this.activeSession ? formatTimeOfDay(this.activeSession.startTime) : null;
-
-    // Top frequent suggestions
+    const dayStats = timerService.getDayTimeRemaining();
+    const syncInfo = timeSync.getSyncInfo();
     const topQuickTags = this.tagsList.slice(0, 6);
 
     this.container.innerHTML = `
       <section class="tracker-view">
-        <!-- Hero Active Ticker Card -->
-        <div class="m3-card hero-card ${isActive ? 'is-active-tracking' : ''}">
-          <div class="time-display-wrapper">
-            <div class="timer-digits ${isActive ? 'ticking' : ''}" id="mainTimerDigits">
-              ${initialTicker}
+        <!-- Relentless Master Clock & Day Depletion (Always Running) -->
+        <div class="m3-card hero-card relentless-hero ${isTracking ? 'is-active-tracking' : ''}">
+          <!-- Sync & Mode Status Header -->
+          <div class="hero-top-row">
+            <div class="sync-badge" id="syncStatusBadge" title="Network monotonic time sync">
+              <span class="sync-dot ${syncInfo.isSynced ? 'synced' : 'local'}"></span>
+              <span class="sync-text">${syncInfo.label}</span>
             </div>
-            <div class="timer-subtitle">
-              ${isActive ? `
-                <span class="live-pulse-badge">
-                  <span class="pulse-dot"></span> Tracking Live
-                </span>
-                <span>• Started at ${startTimeText}</span>
-              ` : `
-                <span class="material-symbols-rounded" style="font-size: 18px;">schedule</span>
-                <span>Ready to start tracking</span>
-              `}
+
+            <div class="day-depletion-pill">
+              <span class="material-symbols-rounded pill-icon">hourglass_top</span>
+              <span>Day Remaining: <strong id="heroDayRemaining">${dayStats.remainingFormatted}</strong></span>
             </div>
           </div>
 
-          <!-- Activity Input with Intelligent Autocomplete -->
-          <div class="tracker-input-section" style="margin-top: 20px;">
-            ${isActive ? `
-              <div class="current-activity-banner" style="text-align: center; margin-bottom: 24px;">
-                <span style="font-size: 0.85rem; color: var(--md-sys-color-outline); text-transform: uppercase; letter-spacing: 0.5px;">Current Activity</span>
-                <h2 style="font-family: var(--font-family-brand); font-size: 1.6rem; color: var(--md-sys-color-primary); margin-top: 4px;">
-                  ${escapeHTML(currentTitle)}
-                </h2>
+          <!-- Main Continuous Digital Ticker -->
+          <div class="time-display-wrapper">
+            ${isTracking ? `
+              <!-- Tracking an Activity -->
+              <div class="counter-label">TRACKING SESSION DURATION</div>
+              <div class="timer-digits ticking" id="mainTimerDigits">
+                ${formatTickerTime(timerService.getActiveElapsedMs())}
+              </div>
+              <div class="timer-subtitle">
+                <span class="live-pulse-badge">
+                  <span class="pulse-dot"></span> Tracking Live
+                </span>
+                <span>• Started at ${formatTimeOfDay(this.activeSession.startTime)}</span>
+              </div>
+            ` : `
+              <!-- Nothing explicitly tracked -> Clock runs relentlessly on untracked time -->
+              <div class="counter-label">UNTRACKED TIME RUNNING (TIME IS RUNNING OUT)</div>
+              <div class="timer-digits untracked-ticking" id="mainTimerDigits">
+                ${formatTickerTime(timerService.getUntrackedElapsedMs())}
+              </div>
+              <div class="timer-subtitle">
+                <span class="live-pulse-badge untracked-pulse">
+                  <span class="pulse-dot untracked-dot"></span> Continuous Time Flow
+                </span>
+                <span id="heroCurrentClock">${formatTimeOfDay(timeSync.now())}</span>
+              </div>
+            `}
+
+            <!-- Day Depletion Progress Bar -->
+            <div class="day-progress-container" title="Percentage of day elapsed">
+              <div class="day-progress-bar">
+                <div class="day-progress-fill" id="heroDayProgressFill" style="width: ${dayStats.percentElapsed}%;"></div>
+              </div>
+              <div class="day-progress-label">
+                <span>00:00</span>
+                <span id="heroDayPercentLabel">${dayStats.percentElapsed}% of today is gone</span>
+                <span>24:00</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Activity Controls & Autocomplete Input -->
+          <div class="tracker-input-section" style="margin-top: 16px;">
+            ${isTracking ? `
+              <div class="current-activity-banner">
+                <span class="banner-subtitle">Active Activity</span>
+                <h2 class="banner-title">${escapeHTML(currentTitle)}</h2>
                 ${this.activeSession.tags && this.activeSession.tags.length > 0 ? `
                   <div class="chips-container" style="justify-content: center; margin-top: 8px;">
                     ${this.activeSession.tags.map(t => `<span class="m3-chip active">#${escapeHTML(t)}</span>`).join('')}
@@ -95,16 +134,14 @@ export class ActiveTracker {
                 <div id="autocompleteDropdown" class="m3-autocomplete-panel" style="display: none;"></div>
               </div>
 
-              <!-- Quick Tag suggestions from memory -->
+              <!-- Quick Tag Suggestions -->
               ${topQuickTags.length > 0 ? `
                 <div style="margin-top: 14px;">
-                  <div style="font-size: 0.8rem; color: var(--md-sys-color-outline); margin-bottom: 6px;">
-                    Recent activities & tags:
-                  </div>
+                  <div class="quick-tags-label">Frequent Activities & Tags:</div>
                   <div class="chips-container" id="quickChipsContainer">
                     ${topQuickTags.map(t => `
                       <button type="button" class="m3-chip quick-select-chip" data-title="${escapeHTML(t.displayName || t.name)}">
-                        <span class="material-symbols-rounded" style="font-size: 15px;">history</span>
+                        <span class="material-symbols-rounded" style="font-size: 14px;">history</span>
                         ${escapeHTML(t.displayName || t.name)}
                       </button>
                     `).join('')}
@@ -114,11 +151,11 @@ export class ActiveTracker {
             `}
           </div>
 
-          <!-- Controls: Start / Stop FAB -->
-          <div style="display: flex; justify-content: center; margin-top: 28px;">
-            ${isActive ? `
+          <!-- Action Buttons -->
+          <div class="tracker-actions-row">
+            ${isTracking ? `
               <button class="m3-fab-extended stop-fab" id="btnStopTimer">
-                <span class="material-symbols-rounded">stop</span>
+                <span class="material-symbols-rounded">stop_circle</span>
                 End & Record Session
               </button>
             ` : `
@@ -126,19 +163,25 @@ export class ActiveTracker {
                 <span class="material-symbols-rounded">play_arrow</span>
                 Start Tracking
               </button>
+
+              <button class="m3-button tonal" id="btnClaimUntracked" title="Claim the currently elapsed untracked time into an activity">
+                <span class="material-symbols-rounded">check_circle</span>
+                Claim Elapsed Untracked Time
+              </button>
             `}
           </div>
         </div>
 
-        <!-- Productivity Philosophy & Shortcuts Card -->
-        <div class="m3-card" style="margin-top: 24px; display: flex; align-items: center; gap: 16px;">
-          <div style="width: 48px; height: 48px; border-radius: var(--shape-corner-lg); background-color: var(--md-sys-color-secondary-container); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-            <span class="material-symbols-rounded" style="font-size: 26px; color: var(--md-sys-color-on-secondary-container);">offline_bolt</span>
+        <!-- Offline & True Time Precision Details Card -->
+        <div class="precision-card">
+          <div class="precision-icon">
+            <span class="material-symbols-rounded">shutter_speed</span>
           </div>
-          <div>
-            <h4 style="font-family: var(--font-family-brand); font-size: 1.05rem; margin-bottom: 2px;">Offline & Background Resilient</h4>
-            <p style="font-size: 0.85rem; color: var(--md-sys-color-outline);">
-              Time continues accurately even when this tab is closed or your device sleeps. All your sessions and tags are stored 100% locally.
+          <div class="precision-content">
+            <h4>Atomic Precision • Offline Forever</h4>
+            <p>
+              Your time is synced once with network atomic time and cached with monotonic system counter. 
+              Even offline, time continues running without drift and survives app closures, device sleep, or background pauses.
             </p>
           </div>
         </div>
@@ -151,6 +194,7 @@ export class ActiveTracker {
     const dropdown = this.container.querySelector('#autocompleteDropdown');
     const btnStart = this.container.querySelector('#btnStartTimer');
     const btnStop = this.container.querySelector('#btnStopTimer');
+    const btnClaim = this.container.querySelector('#btnClaimUntracked');
     const quickChips = this.container.querySelectorAll('.quick-select-chip');
 
     // Quick Chip clicks
@@ -164,7 +208,7 @@ export class ActiveTracker {
       });
     });
 
-    // Start Timer Action
+    // Start Tracking
     if (btnStart) {
       btnStart.addEventListener('click', () => {
         const title = input ? input.value.trim() : 'Attending class';
@@ -172,10 +216,24 @@ export class ActiveTracker {
       });
     }
 
-    // Stop Timer Action
+    // Stop Tracking
     if (btnStop) {
       btnStop.addEventListener('click', async () => {
         await this.handleStop();
+      });
+    }
+
+    // Claim Untracked Time
+    if (btnClaim) {
+      btnClaim.addEventListener('click', async () => {
+        const title = input && input.value.trim() ? input.value.trim() : 'Attending class';
+        const session = await timerService.claimUntrackedTime(title);
+        if (this.onSessionCompleted) {
+          this.onSessionCompleted(session);
+        }
+        if (input) input.value = '';
+        this.render();
+        this.bindEvents();
       });
     }
 
@@ -204,7 +262,6 @@ export class ActiveTracker {
         }
       });
 
-      // Close dropdown when clicking outside
       document.addEventListener('click', (e) => {
         if (!input.contains(e.target) && !dropdown.contains(e.target)) {
           dropdown.style.display = 'none';
@@ -257,7 +314,6 @@ export class ActiveTracker {
   handleStart(title) {
     const actTitle = title || 'Attending class';
     timerService.startTimer(actTitle, [actTitle.toLowerCase()]);
-    // Refresh tags list for future
     getAllTags().then(tags => this.tagsList = tags);
   }
 
@@ -269,11 +325,43 @@ export class ActiveTracker {
     this.tagsList = await getAllTags();
   }
 
-  updateTickerDisplay(formatted) {
+  updateTickingElements(tickData) {
     const digits = this.container.querySelector('#mainTimerDigits');
     if (digits) {
-      digits.textContent = formatted;
+      digits.textContent = tickData.isTracking 
+        ? tickData.activeElapsedFormatted 
+        : tickData.untrackedElapsedFormatted;
     }
+
+    const dayRemaining = this.container.querySelector('#heroDayRemaining');
+    if (dayRemaining) {
+      dayRemaining.textContent = tickData.dayStats.remainingFormatted;
+    }
+
+    const progressFill = this.container.querySelector('#heroDayProgressFill');
+    if (progressFill) {
+      progressFill.style.width = `${tickData.dayStats.percentElapsed}%`;
+    }
+
+    const percentLabel = this.container.querySelector('#heroDayPercentLabel');
+    if (percentLabel) {
+      percentLabel.textContent = `${tickData.dayStats.percentElapsed}% of today is gone`;
+    }
+
+    const currentClock = this.container.querySelector('#heroCurrentClock');
+    if (currentClock) {
+      currentClock.textContent = tickData.currentTimeFormatted;
+    }
+  }
+
+  updateSyncBadge() {
+    const badge = this.container.querySelector('#syncStatusBadge');
+    if (!badge) return;
+    const syncInfo = timeSync.getSyncInfo();
+    badge.innerHTML = `
+      <span class="sync-dot ${syncInfo.isSynced ? 'synced' : 'local'}"></span>
+      <span class="sync-text">${syncInfo.label}</span>
+    `;
   }
 }
 

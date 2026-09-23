@@ -29,32 +29,33 @@ export class LeaderboardView {
   render() {
     const { periodType, range, totalTimeFormatted, totalSessions, dailyAverageFormatted, leaderboard } = this.data;
     const topThree = leaderboard.slice(0, 3);
-    const remainingItems = leaderboard.slice(3);
 
     this.container.innerHTML = `
       <section class="leaderboard-view">
         <!-- View Header -->
         <div class="view-header">
           <div class="view-title-row">
-            <h2 class="view-title">Time Leaderboard</h2>
-            <span class="m3-chip active">
-              <span class="material-symbols-rounded" style="font-size: 16px;">verified</span>
-              ${escapeHTML(range.label)}
-            </span>
+            <div>
+              <h2 class="view-title">Time Leaderboard</h2>
+              <p class="view-subtitle">Ranked analysis of how your finite hours are allocated.</p>
+            </div>
+            <div class="period-status-badge">
+              <span class="status-indicator-dot"></span>
+              <span>${escapeHTML(range.label)}</span>
+            </div>
           </div>
-          <p class="view-subtitle">Ranked breakdown of where your time is being spent.</p>
         </div>
 
         <!-- M3 Segmented Period Selector -->
-        <div style="display: flex; justify-content: center; margin-bottom: 20px;">
+        <div class="segmented-control-wrapper">
           <div class="m3-segmented-group" id="periodSegmentedGroup">
             <button class="m3-segment-btn ${periodType === PERIOD_TYPES.WEEKLY ? 'active' : ''}" data-period="${PERIOD_TYPES.WEEKLY}">
               <span class="material-symbols-rounded">view_week</span>
-              Weekly
+              This Week
             </button>
             <button class="m3-segment-btn ${periodType === PERIOD_TYPES.MONTHLY ? 'active' : ''}" data-period="${PERIOD_TYPES.MONTHLY}">
               <span class="material-symbols-rounded">calendar_month</span>
-              Monthly
+              This Month
             </button>
             <button class="m3-segment-btn ${periodType === PERIOD_TYPES.ALL_TIME ? 'active' : ''}" data-period="${PERIOD_TYPES.ALL_TIME}">
               <span class="material-symbols-rounded">all_inclusive</span>
@@ -62,12 +63,12 @@ export class LeaderboardView {
             </button>
             <button class="m3-segment-btn ${periodType === PERIOD_TYPES.CUSTOM ? 'active' : ''}" data-period="${PERIOD_TYPES.CUSTOM}">
               <span class="material-symbols-rounded">date_range</span>
-              Custom Period
+              Custom Range
             </button>
           </div>
         </div>
 
-        <!-- Custom Date Range Picker (shown when Custom is active) -->
+        <!-- Custom Date Range Picker -->
         ${periodType === PERIOD_TYPES.CUSTOM ? `
           <div class="custom-range-card">
             <div class="date-input-group">
@@ -78,95 +79,107 @@ export class LeaderboardView {
               <label for="customEndDate">To:</label>
               <input type="date" id="customEndDate" class="m3-date-input" value="${this.customRange.end}" />
             </div>
-            <button class="m3-button filled" id="btnApplyCustomRange" style="height: 38px; padding: 0 18px;">
-              <span class="material-symbols-rounded" style="font-size: 18px;">filter_alt</span>
-              Apply Filter
+            <button class="m3-button filled" id="btnApplyCustomRange" style="height: 38px; padding: 0 20px;">
+              <span class="material-symbols-rounded" style="font-size: 18px;">tune</span>
+              Filter Period
             </button>
           </div>
         ` : ''}
 
         <!-- Summary Metrics Cards -->
-        <div class="stats-metrics-grid" style="margin-top: 20px;">
+        <div class="stats-metrics-grid">
           <div class="metric-card">
-            <div class="metric-icon-wrap" style="background-color: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container);">
-              <span class="material-symbols-rounded">timelapse</span>
+            <div class="metric-header">
+              <span class="metric-title">Total Logged Time</span>
+              <span class="material-symbols-rounded metric-icon">timelapse</span>
             </div>
-            <span class="metric-title">Total Logged Time</span>
             <span class="metric-value">${totalTimeFormatted}</span>
+            <span class="metric-subtext">Across selected period</span>
           </div>
 
           <div class="metric-card">
-            <div class="metric-icon-wrap" style="background-color: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container);">
-              <span class="material-symbols-rounded">event_repeat</span>
+            <div class="metric-header">
+              <span class="metric-title">Tracked Sessions</span>
+              <span class="material-symbols-rounded metric-icon">event_note</span>
             </div>
-            <span class="metric-title">Total Sessions</span>
             <span class="metric-value">${totalSessions}</span>
+            <span class="metric-subtext">Completed activity blocks</span>
           </div>
 
           <div class="metric-card">
-            <div class="metric-icon-wrap" style="background-color: var(--md-sys-color-tertiary-container); color: var(--md-sys-color-on-tertiary-container);">
-              <span class="material-symbols-rounded">avg_pace</span>
+            <div class="metric-header">
+              <span class="metric-title">Daily Average</span>
+              <span class="material-symbols-rounded metric-icon">pace</span>
             </div>
-            <span class="metric-title">Daily Average</span>
             <span class="metric-value">${dailyAverageFormatted}</span>
+            <span class="metric-subtext">Per active day</span>
           </div>
         </div>
 
         ${leaderboard.length === 0 ? `
           <div class="m3-card empty-state">
-            <span class="material-symbols-rounded">timer_off</span>
-            <h3>No activities found in this period</h3>
-            <p style="margin-bottom: 20px; font-size: 0.9rem;">
-              You haven't tracked any time between ${range.startDateStr} and ${range.endDateStr}.
+            <span class="material-symbols-rounded empty-icon">hourglass_empty</span>
+            <h3>No activities logged in this period</h3>
+            <p style="margin-bottom: 24px; font-size: 0.9rem; max-width: 440px; margin-inline: auto;">
+              No sessions found for ${range.startDateStr} to ${range.endDateStr}. Start the continuous timer or generate sample data to test the leaderboard.
             </p>
-            <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+            <div style="display: flex; justify-content: center; gap: 14px; flex-wrap: wrap;">
               <button class="m3-button filled" id="btnGoToTracker">
                 <span class="material-symbols-rounded">play_arrow</span>
                 Start Tracking Now
               </button>
               <button class="m3-button tonal" id="btnLoadDemoFromEmpty">
                 <span class="material-symbols-rounded">auto_awesome</span>
-                Load Demo Activities
+                Populate 2-Week Sample Data
               </button>
             </div>
           </div>
         ` : `
-          <!-- Top 3 Podium (When 2 or more activities exist) -->
+          <!-- Elevated Top 3 Podium -->
           ${topThree.length >= 2 ? `
-            <div class="podium-container">
-              <!-- Rank 2: Silver -->
-              ${topThree[1] ? `
-                <div class="podium-step step-2">
-                  <div class="podium-avatar" style="background-color: var(--badge-silver-bg); color: #cfd8dc;">
-                    🥈
+            <div class="podium-section">
+              <div class="podium-container">
+                <!-- Rank 2: Silver -->
+                ${topThree[1] ? `
+                  <div class="podium-step step-2">
+                    <div class="podium-badge-ring silver-ring">
+                      <span class="podium-rank-num">2</span>
+                    </div>
+                    <div class="podium-name" title="${escapeHTML(topThree[1].title)}">${escapeHTML(topThree[1].title)}</div>
+                    <div class="podium-time">${topThree[1].formattedDuration}</div>
+                    <div class="podium-block">
+                      <span class="podium-percent">${topThree[1].percent}%</span>
+                    </div>
                   </div>
-                  <div class="podium-name" title="${escapeHTML(topThree[1].title)}">${escapeHTML(topThree[1].title)}</div>
-                  <div class="podium-time">${topThree[1].formattedDuration}</div>
-                  <div class="podium-block">2</div>
-                </div>
-              ` : ''}
+                ` : ''}
 
-              <!-- Rank 1: Gold -->
-              <div class="podium-step step-1">
-                <div class="podium-avatar" style="background-color: var(--badge-gold-bg); color: #ffd54f;">
-                  👑
+                <!-- Rank 1: Gold -->
+                <div class="podium-step step-1">
+                  <div class="podium-badge-ring gold-ring">
+                    <span class="material-symbols-rounded crown-icon">stars</span>
+                    <span class="podium-rank-num">1</span>
+                  </div>
+                  <div class="podium-name" title="${escapeHTML(topThree[0].title)}">${escapeHTML(topThree[0].title)}</div>
+                  <div class="podium-time">${topThree[0].formattedDuration}</div>
+                  <div class="podium-block">
+                    <span class="podium-percent">${topThree[0].percent}%</span>
+                  </div>
                 </div>
-                <div class="podium-name" title="${escapeHTML(topThree[0].title)}">${escapeHTML(topThree[0].title)}</div>
-                <div class="podium-time">${topThree[0].formattedDuration}</div>
-                <div class="podium-block">1</div>
+
+                <!-- Rank 3: Bronze -->
+                ${topThree[2] ? `
+                  <div class="podium-step step-3">
+                    <div class="podium-badge-ring bronze-ring">
+                      <span class="podium-rank-num">3</span>
+                    </div>
+                    <div class="podium-name" title="${escapeHTML(topThree[2].title)}">${escapeHTML(topThree[2].title)}</div>
+                    <div class="podium-time">${topThree[2].formattedDuration}</div>
+                    <div class="podium-block">
+                      <span class="podium-percent">${topThree[2].percent}%</span>
+                    </div>
+                  </div>
+                ` : ''}
               </div>
-
-              <!-- Rank 3: Bronze -->
-              ${topThree[2] ? `
-                <div class="podium-step step-3">
-                  <div class="podium-avatar" style="background-color: var(--badge-bronze-bg); color: #ffab91;">
-                    🥉
-                  </div>
-                  <div class="podium-name" title="${escapeHTML(topThree[2].title)}">${escapeHTML(topThree[2].title)}</div>
-                  <div class="podium-time">${topThree[2].formattedDuration}</div>
-                  <div class="podium-block">3</div>
-                </div>
-              ` : ''}
             </div>
           ` : ''}
 
@@ -182,25 +195,25 @@ export class LeaderboardView {
   renderLeaderboardItem(item) {
     const isTopThree = item.rank <= 3;
     const rankClass = isTopThree ? `rank-${item.rank}` : '';
-    const medalEmoji = item.rank === 1 ? '🥇' : item.rank === 2 ? '🥈' : item.rank === 3 ? '🥉' : `#${item.rank}`;
 
     return `
       <div class="leaderboard-item ${rankClass}">
-        <div class="rank-badge">${medalEmoji}</div>
+        <div class="rank-badge">
+          <span>${item.rank}</span>
+        </div>
         <div class="leaderboard-info">
           <div class="activity-title-row">
             <span class="activity-name">${escapeHTML(item.title)}</span>
             <span class="activity-duration-pill">${item.formattedDuration}</span>
           </div>
 
-          <!-- Progress Bar showing percentage of total time -->
           <div class="activity-progress-bar">
-            <div class="activity-progress-fill" style="width: ${Math.max(3, item.percent)}%;"></div>
+            <div class="activity-progress-fill" style="width: ${Math.max(2, item.percent)}%;"></div>
           </div>
 
           <div class="activity-meta-row">
             <span>${item.sessionCount} ${item.sessionCount === 1 ? 'session' : 'sessions'} • ${item.humanDuration}</span>
-            <span style="font-weight: 600;">${item.percent}% of total time</span>
+            <span class="percent-meta">${item.percent}% of logged time</span>
           </div>
         </div>
       </div>
@@ -208,7 +221,6 @@ export class LeaderboardView {
   }
 
   bindEvents() {
-    // Segmented period buttons
     const periodButtons = this.container.querySelectorAll('.m3-segment-btn');
     periodButtons.forEach(btn => {
       btn.addEventListener('click', async () => {
@@ -220,7 +232,6 @@ export class LeaderboardView {
       });
     });
 
-    // Custom date range filter
     const btnApply = this.container.querySelector('#btnApplyCustomRange');
     if (btnApply) {
       btnApply.addEventListener('click', async () => {
@@ -235,7 +246,6 @@ export class LeaderboardView {
       });
     }
 
-    // Empty state triggers
     const btnGoToTracker = this.container.querySelector('#btnGoToTracker');
     if (btnGoToTracker && this.onNavigateToTracker) {
       btnGoToTracker.addEventListener('click', () => this.onNavigateToTracker());

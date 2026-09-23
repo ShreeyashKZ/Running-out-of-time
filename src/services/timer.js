@@ -1,27 +1,49 @@
-// Background-Resilient Timer Service for "Running out of time"
-import { getActiveTimerState, saveActiveTimerState, addSession } from './db.js';
+// Relentless Continuous Timer & Master Timepiece Service for "Running out of time"
+import { getActiveTimerState, saveActiveTimerState, addSession, getAllSessions } from './db.js';
+import { timeSync } from './timeSync.js';
 
 class TimerService {
   constructor() {
     this.activeSession = null;
-    this.timerInterval = null;
+    this.masterInterval = null;
     this.tickListeners = new Set();
     this.stateListeners = new Set();
+    this.lastSessionEndTime = null;
 
-    // Rehydrate from localStorage immediately
     this.init();
   }
 
-  init() {
+  async init() {
+    // Rehydrate active tracking session
     const saved = getActiveTimerState();
     if (saved && saved.isRunning && saved.startTime) {
       this.activeSession = saved;
-      this.startTicking();
     }
+
+    // Determine when the last tracked session finished to calculate untracked time
+    const all = await getAllSessions();
+    if (all.length > 0) {
+      this.lastSessionEndTime = all[0].endTime || all[0].startTime;
+    } else {
+      this.lastSessionEndTime = timeSync.now();
+    }
+
+    // Master Clock runs 24/7/365 unconditionally
+    this.startMasterClock();
+  }
+
+  startMasterClock() {
+    if (this.masterInterval) clearInterval(this.masterInterval);
+
+    this.masterInterval = setInterval(() => {
+      this.notifyTick();
+    }, 1000);
+
+    this.notifyTick();
   }
 
   startTimer(title = 'Attending class', tags = [], customStartTime = null) {
-    const startTime = customStartTime || Date.now();
+    const startTime = customStartTime || timeSync.now();
     const sessionData = {
       title: title.trim() || 'Untitled Activity',
       tags: Array.isArray(tags) ? tags : [tags].filter(Boolean),
@@ -32,15 +54,15 @@ class TimerService {
 
     this.activeSession = sessionData;
     saveActiveTimerState(this.activeSession);
-    this.startTicking();
-    this.notifyStateListeners();
+    this.notifyState();
+    this.notifyTick();
     return this.activeSession;
   }
 
   async stopTimer() {
     if (!this.activeSession) return null;
 
-    const endTime = Date.now();
+    const endTime = timeSync.now();
     const startTime = this.activeSession.startTime;
     const durationMs = Math.max(0, endTime - startTime);
     const startDate = new Date(startTime);
@@ -59,28 +81,40 @@ class TimerService {
     // Save to IndexedDB
     await addSession(completedSession);
 
-    // Stop ticking & clear active state
-    this.stopTicking();
+    // Update last session end time for untracked time counter
+    this.lastSessionEndTime = endTime;
+
     this.activeSession = null;
     saveActiveTimerState(null);
-    this.notifyStateListeners();
+
+    this.notifyState();
+    this.notifyTick();
 
     return completedSession;
   }
 
-  startTicking() {
-    if (this.timerInterval) clearInterval(this.timerInterval);
-    this.timerInterval = setInterval(() => {
-      this.notifyTickListeners();
-    }, 1000);
-    this.notifyTickListeners();
-  }
+  // Claim the ongoing untracked time retroactively
+  async claimUntrackedTime(title, tags = []) {
+    const now = timeSync.now();
+    const startTime = this.lastSessionEndTime || (now - 15 * 60 * 1000);
+    const durationMs = Math.max(0, now - startTime);
+    const startDate = new Date(startTime);
+    const dateStr = startDate.toISOString().split('T')[0];
 
-  stopTicking() {
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-      this.timerInterval = null;
-    }
+    const session = {
+      title: title.trim() || 'Untitled Activity',
+      tags: Array.isArray(tags) ? tags : [title.trim().toLowerCase()],
+      startTime,
+      endTime: now,
+      durationMs,
+      dateStr,
+      notes: 'Claimed from untracked time'
+    };
+
+    await addSession(session);
+    this.lastSessionEndTime = now;
+    this.notifyTick();
+    return session;
   }
 
   isActive() {
@@ -91,9 +125,35 @@ class TimerService {
     return this.activeSession;
   }
 
-  getElapsedMs() {
+  getActiveElapsedMs() {
     if (!this.activeSession) return 0;
-    return Math.max(0, Date.now() - this.activeSession.startTime);
+    return Math.max(0, timeSync.now() - this.activeSession.startTime);
+  }
+
+  getUntrackedElapsedMs() {
+    if (this.isActive()) return 0;
+    if (!this.lastSessionEndTime) return 0;
+    return Math.max(0, timeSync.now() - this.lastSessionEndTime);
+  }
+
+  // Get Day Remaining Progress (Running out of time core metric)
+  getDayTimeRemaining() {
+    const now = new Date(timeSync.now());
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).getTime();
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
+
+    const totalDayMs = 24 * 3600 * 1000;
+    const elapsedDayMs = now.getTime() - startOfDay;
+    const remainingDayMs = Math.max(0, endOfDay - now.getTime());
+    const percentElapsed = Math.min(100, Math.max(0, (elapsedDayMs / totalDayMs) * 100));
+
+    return {
+      currentTimestamp: now.getTime(),
+      remainingMs: remainingDayMs,
+      remainingFormatted: formatTickerTime(remainingDayMs),
+      remainingHuman: formatHumanDuration(remainingDayMs),
+      percentElapsed: Math.round(percentElapsed * 10) / 10
+    };
   }
 
   onTick(callback) {
@@ -106,19 +166,34 @@ class TimerService {
     return () => this.stateListeners.delete(callback);
   }
 
-  notifyTickListeners() {
-    const elapsedMs = this.getElapsedMs();
-    const formatted = formatTickerTime(elapsedMs);
+  notifyTick() {
+    const now = timeSync.now();
+    const activeElapsed = this.getActiveElapsedMs();
+    const untrackedElapsed = this.getUntrackedElapsedMs();
+    const dayStats = this.getDayTimeRemaining();
+
+    const tickPayload = {
+      now,
+      currentTimeFormatted: formatTimeOfDay(now),
+      activeElapsedMs: activeElapsed,
+      activeElapsedFormatted: formatTickerTime(activeElapsed),
+      untrackedElapsedMs: untrackedElapsed,
+      untrackedElapsedFormatted: formatTickerTime(untrackedElapsed),
+      dayStats,
+      activeSession: this.activeSession,
+      isTracking: this.isActive()
+    };
+
     for (const listener of this.tickListeners) {
       try {
-        listener(elapsedMs, formatted, this.activeSession);
+        listener(tickPayload);
       } catch (err) {
         console.error('Tick listener error:', err);
       }
     }
   }
 
-  notifyStateListeners() {
+  notifyState() {
     for (const listener of this.stateListeners) {
       try {
         listener(this.activeSession);
@@ -131,7 +206,6 @@ class TimerService {
 
 // ==================== FORMATTERS ====================
 
-// Format to HH:MM:SS
 export function formatTickerTime(ms) {
   const totalSeconds = Math.floor(ms / 1000);
   const hours = Math.floor(totalSeconds / 3600);
@@ -142,7 +216,6 @@ export function formatTickerTime(ms) {
   return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
 }
 
-// User requested exact human duration: e.g. "3 hour 5 minutes"
 export function formatHumanDuration(ms) {
   const totalSeconds = Math.floor(ms / 1000);
   const hours = Math.floor(totalSeconds / 3600);
@@ -163,7 +236,6 @@ export function formatHumanDuration(ms) {
   return parts.join(' ') || '0 minutes';
 }
 
-// Compact string for badges: e.g. "3h 5m"
 export function formatCompactDuration(ms) {
   const totalSeconds = Math.floor(ms / 1000);
   const hours = Math.floor(totalSeconds / 3600);
@@ -178,14 +250,12 @@ export function formatCompactDuration(ms) {
   return `${totalSeconds}s`;
 }
 
-// Format 12-hour time: "12:25 PM"
 export function formatTimeOfDay(timestamp) {
   if (!timestamp) return '--:--';
   const d = new Date(timestamp);
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
 }
 
-// Format date: "Wednesday, Sep 23, 2026"
 export function formatDateLabel(dateStrOrTs) {
   const d = new Date(dateStrOrTs);
   return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
